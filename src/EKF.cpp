@@ -154,7 +154,7 @@ VectorXd EKF::f0(){
         0,0,0,0,0,0;
     return f;
 }
-#include <iostream>
+
 VectorXd EKF::predict(const VectorXd u, const double dt){
     /* Update u */
     wx = u[0];

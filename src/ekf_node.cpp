@@ -31,7 +31,7 @@ void imu_callback(const sensor_msgs::Imu::ConstPtr &msg)
         msg->linear_acceleration.x,
         msg->linear_acceleration.y,
         msg->linear_acceleration.z;
-    cout<<"Predict =\n"<<ekf->predict(u,imu_time-last_imu_time)<<endl;
+    //cout<<"Predict =\n"<<ekf->predict(u,imu_time-last_imu_time)<<endl;
     last_imu_time = imu_time;
 }
 
@@ -53,7 +53,48 @@ void odom_callback(const nav_msgs::Odometry::ConstPtr &msg)
     // camera orientaion in the IMU frame = Quaternion(0, 0, 0, 1); w x y z, respectively
     //                     RotationMatrix << -1, 0, 0,
     //                                       0, -1, 0,
-    //                                       0, 0, 1;
+    // 
+    VectorXd z(9);
+
+    Vector3d T_cw;
+    Matrix3d R_cw;
+    T_cw<<  msg->pose.pose.position.x,
+            msg->pose.pose.position.y,
+            msg->pose.pose.position.z;
+    R_cw = Quaterniond(
+        msg->pose.pose.orientation.w,
+        msg->pose.pose.orientation.x,
+        msg->pose.pose.orientation.y,
+        msg->pose.pose.orientation.z
+    ).toRotationMatrix();
+    std::cout<<"R_cw = \n"<<R_cw<<std::endl;
+    std::cout<<"T_cw = \n"<<T_cw<<std::endl;
+
+    Vector3d T_wc = -1*T_cw;
+    Matrix3d R_wc = R_cw.transpose();
+    Vector3d T_ci = -1*T_ic;
+    Matrix3d R_ci = R_ic.transpose();
+   
+    Matrix3d R_wi = R_wc*R_ci;
+    std::cout<<"R_wi = \n"<<R_wi<<std::endl;
+    Vector3d T_wi = R_wc*T_ci+T_wc;
+    std::cout<<"T_wi = \n"<<T_wi<<std::endl;
+
+    double roll = asin(R_wi(2,1));
+    double yaw = atan2(-R_wi(0,1)/cos(roll),R_wi(1,1)/cos(roll));
+    double pitch = atan2(-R_wi(2,0)/cos(roll),R_wi(2,2)/cos(roll));
+    
+    z<< T_wi.x(),
+        T_wi.y(),
+        T_wi.z(),
+        roll,
+        pitch,
+        yaw,
+        0,
+        0,
+        0;
+    std::cout<<"z = \n"<<z<<std::endl;
+    ekf->update(z);
 }
 
 int main(int argc, char **argv)
