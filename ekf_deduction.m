@@ -11,7 +11,7 @@ syms ngx ngy ngz % gyro noise
 syms nax nay naz % acc noise
 syms nbgx nbgy nbgz % gyro bias noise
 syms nbax nbay nbaz % acc bias noise
-syms a b c
+syms a b c % rubbish vars for jacobian computation
 assume([x y z roll pitch yaw vx vy vz bgx bgy bgz bax bay baz],'real');
 assume([ngx ngy ngz nax nay naz],'real');
 assume([wx wy wz ax ay az g nbgx nbgy nbgz nbax nbay nbaz],'real');
@@ -44,19 +44,11 @@ X_dot = [p_dot;G_inv*(wm-bg-ng);g+R*(am-ba-na);nbg;nba];
 f = simplify(X_dot);
 f0 = [p_dot;G_inv*(wm-bg);g+R*(am-ba);zeros(6,1)];
 
-% Calculate A,B,U
+% Calculate A,U
 A = jacobian(f0,X);
 U = jacobian(f,n);
-% A = sym(zeros(15,15));B = sym(zeros(15,15));U = sym(zeros(15,15));
-% for i=1:15
-%     for j=1:15
-%         A(i,j) = diff(f0(i),X(j));
-%         %B(i) = diff(f0(i),u(i));
-%         U(i,j) = diff(f(i),n(j));
-%     end
-% end
 
 % Calculate C
-C_pnp = diag([ones(1,6) zeros(1,9)]);
-C_optflow = blkdiag(eye(6),R');
-C_optflow = blkdiag(C_optflow,zeros(6,6));
+Z = [p;q;R'*p_dot];
+C = jacobian(Z,X);
+g0 = [p;q;R'*p_dot];
