@@ -30,7 +30,7 @@ inline void EKF::updateMean(){
     baz = mu[14];
 }
 
-inline MatrixXd EKF::A(){
+MatrixXd EKF::A(){
     /*** Assuming u has been updated before the call ***/
     MatrixXd A = MatrixXd::Zero(15,15);
 
@@ -89,12 +89,12 @@ inline MatrixXd EKF::A(){
     return A;
 }
 
-MatrixXd EKF::F(const double dt){
+inline MatrixXd EKF::F(const double dt){
     MatrixXd I = MatrixXd::Identity(15,15);
     return I+dt*A();
 }
 
-inline MatrixXd EKF::U(){
+MatrixXd EKF::U(){
     /*** Assuming u has been updated before the call ***/
     MatrixXd U = MatrixXd::Zero(15,15);
 
@@ -137,7 +137,7 @@ inline MatrixXd EKF::U(){
     return U;
 }
 
-MatrixXd EKF::V(const double dt){
+inline MatrixXd EKF::V(const double dt){
     return dt*U();
 }
 
@@ -163,16 +163,19 @@ VectorXd EKF::predict(const VectorXd u, const double dt){
     ax = u[3];
     ay = u[4];
     az = u[5];
+   
+    MatrixXd Ft = F(dt);
+    MatrixXd Vt = V(dt); 
 
     /* Estimate mean */
     mu_hat = mu + dt*f0(); // mu here is mu_(t-1)
 
     /* Estimate coveriance */
-    sigma_hat = F(dt)*sigma*(F(dt).transpose())+V(dt)*Q*(V(dt).transpose());
+    sigma_hat = Ft*sigma*(Ft.transpose())+Vt*Q*(Vt.transpose());
     return mu_hat;
 }
 
-inline MatrixXd EKF::C(){
+MatrixXd EKF::C(){
     MatrixXd C = MatrixXd::Identity(9,15);
 
     /* dg/droll */
@@ -207,16 +210,29 @@ inline MatrixXd EKF::C(){
     return C;
 }
 
-MatrixXd EKF::K(){
-    MatrixXd K(15,9);
-    MatrixXd C = C();
-    Matrix C_T = C.transpose();
+VectorXd EKF::g0(){
+    VectorXd g(9);
+    g<<x,y,z,roll,pitch,yaw,
+        vx*(cos(pitch)*cos(yaw) - sin(pitch)*sin(roll)*sin(yaw)) + vy*(cos(pitch)*sin(yaw) + cos(yaw)*sin(pitch)*sin(roll)) - vz*cos(roll)*sin(pitch),
+        vz*sin(roll) + vy*cos(roll)*cos(yaw) - vx*cos(roll)*sin(yaw),
+        vx*(cos(yaw)*sin(pitch) + cos(pitch)*sin(roll)*sin(yaw)) + vy*(sin(pitch)*sin(yaw) - cos(pitch)*cos(yaw)*sin(roll)) + vz*cos(pitch)*cos(roll);
 
-    K = sigma_hat*C_T*((C*sigma_hat*C_T+W*R*W.transpose()).inverse());
-    return K
+    return g;
 }
 
-void EKF::update(const VectorXd z){
-    MatrixXd K = K();
-    mu = mu_hat + K*(z - )
+MatrixXd EKF::K(){
+    MatrixXd K(15,9);
+    MatrixXd Ct = C();
+    MatrixXd Ct_T = Ct.transpose();
+
+    K = sigma_hat*Ct_T*((Ct*sigma_hat*Ct_T+W*R*W.transpose()).inverse());
+    return K;
+}
+
+void EKF::update(const VectorXd zt){
+    MatrixXd Kt = K();
+    MatrixXd Ct = C();
+    mu = mu_hat + Kt*(zt - g0());
+    updateMean();
+    sigma = sigma_hat - Kt*Ct*sigma_hat;
 }

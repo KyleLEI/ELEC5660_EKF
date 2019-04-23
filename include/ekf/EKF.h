@@ -20,6 +20,7 @@ private:
     Eigen::MatrixXd V(const double dt);
     /* Measurement Model */
     Eigen::MatrixXd C();
+    Eigen::VectorXd g0();
     /* Kalman Gain */
     Eigen::MatrixXd K();
 
