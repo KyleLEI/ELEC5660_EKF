@@ -14,7 +14,7 @@ private:
     /* Private Function */
     Eigen::VectorXd f0();    // returns f(mu_(t-1), u_t, 0)
     Eigen::MatrixXd A();
-    Eigen::VectorXd F(const double dt);
+    Eigen::MatrixXd F(const double dt);
     Eigen::MatrixXd U();
     Eigen::MatrixXd V(const double dt);
     Eigen::MatrixXd C();
@@ -36,12 +36,6 @@ private:
     double bgx,bgy,bgz;     // X4: gyro bias b_g
     double bax,bay,baz;     // X5: acc bias b_a
     void updateMean();      // Always call this after updating mu
-    
-    /* Noise n */
-    double ngx,ngy,ngz;     // gyro noise
-    double nax,nay,naz;     // acc noise
-    double nbgx,nbgy,nbgz;  // gyro bias noise
-    double nbax,nbay,nbaz;  // acc bias noise
 
     /* Input u */
     double wx,wy,wz;        // gyro

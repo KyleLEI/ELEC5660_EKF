@@ -3,7 +3,7 @@
 
 using namespace Eigen;
 
-EKF::EKF(const VectorXd is, const MatrixXd ic, const MatrixXd Q_in, const MatrixXd R_in):sigma_hat(15,15),mu_hat(15),sigma(15,15),mu(15){
+EKF::EKF(const VectorXd is, const MatrixXd ic, const MatrixXd Q_in, const MatrixXd R_in):sigma_hat(15,15),mu_hat(15){
     mu = is;
     updateMean();
     sigma = ic;
@@ -27,14 +27,6 @@ inline void EKF::updateMean(){
     bax = mu[12];
     bay = mu[13];
     baz = mu[14];
-}
-
-inline VectorXd EKF::A(){
-    /* Everything haven't been updated yet, so x = mu_(t-1) */
-    /*** Assuming u has been updated before calling this func ***/
-    VectorXd A = VectorXd::Zero(15);
-    A[4] = - (cos(pitch)*sin(roll)*(bgx - wx))/cos(roll) - (sin(pitch)*sin(roll)*(bgz - wz))/cos(roll);
-    return A;
 }
 
 inline MatrixXd EKF::A(){
@@ -96,13 +88,13 @@ inline MatrixXd EKF::A(){
     return A;
 }
 
-inline MatrixXd EKF::F(const double dt){
+MatrixXd EKF::F(const double dt){
     MatrixXd I = MatrixXd::Identity(15,15);
     return I+dt*A();
 }
 
 inline MatrixXd EKF::U(){
-    /*** Assuming u has been updated before calling ***/
+    /*** Assuming u has been updated before the call ***/
     MatrixXd U = MatrixXd::Zero(15,15);
 
     /* df/dngx */
@@ -111,16 +103,45 @@ inline MatrixXd EKF::U(){
     U(5,3) = sin(pitch)/cos(roll);
 
     /* df/dngy */
+    U(4,4) = -1.0;
 
+    /* df/dngz */
+    U(3,5) = -sin(pitch);
+    U(4,5) = (cos(pitch)*sin(roll))/cos(roll);
+    U(5,5) = -cos(pitch)/cos(roll);
+
+    /* df/dnax */
+    U(6,6) = sin(pitch)*sin(roll)*sin(yaw) - cos(pitch)*cos(yaw);
+    U(7,6) = - cos(pitch)*sin(yaw) - cos(yaw)*sin(pitch)*sin(roll);
+    U(8,6) = cos(roll)*sin(pitch);
+
+    /* df/dnay */
+    U(6,7) = cos(roll)*sin(yaw);
+    U(7,7) = -cos(roll)*cos(yaw);
+    U(8,7) = -sin(roll);
+
+    /* df/dnaz */
+    U(6,8) = - cos(yaw)*sin(pitch) - cos(pitch)*sin(roll)*sin(yaw);
+    U(7,8) = cos(pitch)*cos(yaw)*sin(roll) - sin(pitch)*sin(yaw);
+    U(8,8) = -cos(pitch)*cos(roll);
+
+    /* df/dnbg, df/dnba */
+    U(9,9) = 1.0;
+    U(10,10) = 1.0;
+    U(11,11) = 1.0;
+    U(12,12) = 1.0;
+    U(13,13) = 1.0;
+    U(14,14) = 1.0;
 
     return U;
 }
 
-inline VectorXd EKF::V(const double dt){
+MatrixXd EKF::V(const double dt){
     return dt*U();
 }
 
 VectorXd EKF::f0(){
+    /*** Assuming u has been updated before the call ***/
     VectorXd f(15);
     f<<vx,vy,vz,
         - cos(pitch)*(bgx - wx) - sin(pitch)*(bgz - wz),
@@ -146,6 +167,6 @@ VectorXd EKF::predict(const VectorXd u, const double dt){
     mu_hat = mu + dt*f0(); // mu here is mu_(t-1)
 
     /* Estimate coveriance */
-    sigma_hat = F(dt)*sigma*(F(dt))
+    sigma_hat = F(dt)*sigma*(F(dt).transpose())+V(dt)*Q*(V(dt).transpose());
     return mu_hat;
 }
