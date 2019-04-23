@@ -49,6 +49,9 @@ A = jacobian(f0,X);
 U = jacobian(f,n);
 
 % Calculate C
-Z = [p;q;R'*p_dot];
-C = jacobian(Z,X);
+Z_1 = [p;q];
+C_1 = jacobian(Z_1,X);
+g_1 = [p;q];
+Z_23 = [p;q;R'*p_dot];
+C_23 = jacobian(Z_23,X);
 g0 = [p;q;R'*p_dot];
