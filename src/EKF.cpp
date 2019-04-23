@@ -7,8 +7,9 @@ EKF::EKF(const VectorXd is, const MatrixXd ic, const MatrixXd Q_in, const Matrix
     mu = is;
     updateMean();
     sigma = ic;
-    Q = Q_in;
-    R = R_in;
+    Q = Q_in; // 15*15
+    R = R_in; // 9*9
+    W = MatrixXd::Identity(9,9);
 }
 
 inline void EKF::updateMean(){
@@ -34,7 +35,7 @@ inline MatrixXd EKF::A(){
     MatrixXd A = MatrixXd::Zero(15,15);
 
     /* df0/droll */
-    A(4,3) = (bgz*cos(pitch) - bgx*sin(pitch) - wz*cos(pitch) + wx*sin(pitch))/cos(roll)*cos(roll);
+    A(4,3) = (bgz*cos(pitch) - bgx*sin(pitch) - wz*cos(pitch) + wx*sin(pitch))/(cos(roll)*cos(roll));
     A(5,3) = (sin(pitch)*sin(roll)*(bgx - wx))/(cos(roll)*cos(roll)) - (cos(pitch)*sin(roll)*(bgz - wz))/(cos(roll)*cos(roll));
     A(6,3) = sin(roll)*sin(yaw)*(ay - bay) + cos(pitch)*cos(roll)*sin(yaw)*(az - baz) - cos(roll)*sin(pitch)*sin(yaw)*(ax - bax);
     A(7,3) = cos(roll)*cos(yaw)*sin(pitch)*(ax - bax) - cos(pitch)*cos(roll)*cos(yaw)*(az - baz) - cos(yaw)*sin(roll)*(ay - bay);
@@ -169,4 +170,53 @@ VectorXd EKF::predict(const VectorXd u, const double dt){
     /* Estimate coveriance */
     sigma_hat = F(dt)*sigma*(F(dt).transpose())+V(dt)*Q*(V(dt).transpose());
     return mu_hat;
+}
+
+inline MatrixXd EKF::C(){
+    MatrixXd C = MatrixXd::Identity(9,15);
+
+    /* dg/droll */
+    C(6,3) = sin(pitch)*(vz*sin(roll) + vy*cos(roll)*cos(yaw) - vx*cos(roll)*sin(yaw));
+    C(7,3) = vz*cos(roll) - vy*cos(yaw)*sin(roll) + vx*sin(roll)*sin(yaw);
+    C(8,3) = -cos(pitch)*(vz*sin(roll) + vy*cos(roll)*cos(yaw) - vx*cos(roll)*sin(yaw));
+
+    /* dg/dpitch */
+    C(6,4) = - vx*(cos(yaw)*sin(pitch) + cos(pitch)*sin(roll)*sin(yaw)) - vy*(sin(pitch)*sin(yaw) - cos(pitch)*cos(yaw)*sin(roll)) - vz*cos(pitch)*cos(roll);
+    C(8,4) = vx*(cos(pitch)*cos(yaw) - sin(pitch)*sin(roll)*sin(yaw)) + vy*(cos(pitch)*sin(yaw) + cos(yaw)*sin(pitch)*sin(roll)) - vz*cos(roll)*sin(pitch);
+
+    /* dg/dyaw */
+    C(6,5) = vy*(cos(pitch)*cos(yaw) - sin(pitch)*sin(roll)*sin(yaw)) - vx*(cos(pitch)*sin(yaw) + cos(yaw)*sin(pitch)*sin(roll));
+    C(7,5) = -cos(roll)*(vx*cos(yaw) + vy*sin(yaw));
+    C(8,5) = vy*(cos(yaw)*sin(pitch) + cos(pitch)*sin(roll)*sin(yaw)) - vx*(sin(pitch)*sin(yaw) - cos(pitch)*cos(yaw)*sin(roll));
+
+    /* dg/dvx */
+    C(6,6) = cos(pitch)*cos(yaw) - sin(pitch)*sin(roll)*sin(yaw);
+    C(7,6) = -cos(roll)*sin(yaw);
+    C(8,6) = cos(yaw)*sin(pitch) + cos(pitch)*sin(roll)*sin(yaw);
+
+    /* dg/dvy */
+    C(6,7) = cos(pitch)*sin(yaw) + cos(yaw)*sin(pitch)*sin(roll);
+    C(7,7) = cos(roll)*cos(yaw);
+    C(8,7) = sin(pitch)*sin(yaw) - cos(pitch)*cos(yaw)*sin(roll);
+
+    /* dg/dvz */
+    C(6,8) = -cos(roll)*sin(pitch);
+    C(7,8) = sin(roll);
+    C(8,8) = cos(pitch)*cos(roll);
+
+    return C;
+}
+
+MatrixXd EKF::K(){
+    MatrixXd K(15,9);
+    MatrixXd C = C();
+    Matrix C_T = C.transpose();
+
+    K = sigma_hat*C_T*((C*sigma_hat*C_T+W*R*W.transpose()).inverse());
+    return K
+}
+
+void EKF::update(const VectorXd z){
+    MatrixXd K = K();
+    mu = mu_hat + K*(z - )
 }

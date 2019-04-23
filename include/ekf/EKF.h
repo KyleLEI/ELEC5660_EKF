@@ -5,20 +5,22 @@ public:
     EKF(const Eigen::VectorXd initial_mean, const Eigen::MatrixXd initial_cov,
         const Eigen::MatrixXd Q_in, const Eigen::MatrixXd R_in);
     Eigen::VectorXd predict(const Eigen::VectorXd u_t, const double dt); 
-    void update();
+    void update(const Eigen::VectorXd z_t);
 
     //Eigen::MatrixXd getCovarianceMatrix() const{return sigma;}
     //Eigen::VectorXd getMean() const{} 
 
 private:
     /* Private Function */
+    /* Process Model */
     Eigen::VectorXd f0();    // returns f(mu_(t-1), u_t, 0)
     Eigen::MatrixXd A();
     Eigen::MatrixXd F(const double dt);
     Eigen::MatrixXd U();
     Eigen::MatrixXd V(const double dt);
+    /* Measurement Model */
     Eigen::MatrixXd C();
-    Eigen::MatrixXd W();
+    /* Kalman Gain */
     Eigen::MatrixXd K();
 
     /* Private Data */
@@ -28,6 +30,7 @@ private:
     Eigen::VectorXd mu_hat;
     Eigen::MatrixXd Q;
     Eigen::MatrixXd R;
+    Eigen::MatrixXd W;
 
     /* Mean of State, mu */
     double x,y,z;           // X1: position p,      PNP
