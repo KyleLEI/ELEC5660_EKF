@@ -13,7 +13,7 @@ using namespace std;
 using namespace Eigen;
 ros::Publisher odom_pub;
 MatrixXd Q = MatrixXd::Identity(15, 15);
-MatrixXd Rt = MatrixXd::Identity(9,9);
+MatrixXd Rt = MatrixXd::Identity(6,6);
 double imu_time, last_imu_time=-1.0; 
 
 void imu_callback(const sensor_msgs::Imu::ConstPtr &msg)
@@ -31,7 +31,7 @@ void imu_callback(const sensor_msgs::Imu::ConstPtr &msg)
         msg->linear_acceleration.x,
         msg->linear_acceleration.y,
         msg->linear_acceleration.z;
-    //cout<<"Predict =\n"<<ekf->predict(u,imu_time-last_imu_time)<<endl;
+    cout<<"Predict =\n"<<ekf->predict(u,imu_time-last_imu_time)<<endl;
     last_imu_time = imu_time;
 }
 
@@ -54,7 +54,7 @@ void odom_callback(const nav_msgs::Odometry::ConstPtr &msg)
     //                     RotationMatrix << -1, 0, 0,
     //                                       0, -1, 0,
     // 
-    VectorXd z(9);
+    VectorXd z(6);
 
     Vector3d T_cw;
     Matrix3d R_cw;
@@ -67,8 +67,8 @@ void odom_callback(const nav_msgs::Odometry::ConstPtr &msg)
         msg->pose.pose.orientation.y,
         msg->pose.pose.orientation.z
     ).toRotationMatrix();
-    std::cout<<"R_cw = \n"<<R_cw<<std::endl;
-    std::cout<<"T_cw = \n"<<T_cw<<std::endl;
+    //std::cout<<"R_cw = \n"<<R_cw<<std::endl;
+    //std::cout<<"T_cw = \n"<<T_cw<<std::endl;
 
     Vector3d T_wc = -1*T_cw;
     Matrix3d R_wc = R_cw.transpose();
@@ -76,9 +76,9 @@ void odom_callback(const nav_msgs::Odometry::ConstPtr &msg)
     Matrix3d R_ci = R_ic.transpose();
    
     Matrix3d R_wi = R_wc*R_ci;
-    std::cout<<"R_wi = \n"<<R_wi<<std::endl;
+    //std::cout<<"R_wi = \n"<<R_wi<<std::endl;
     Vector3d T_wi = R_wc*T_ci+T_wc;
-    std::cout<<"T_wi = \n"<<T_wi<<std::endl;
+    //std::cout<<"T_wi = \n"<<T_wi<<std::endl;
 
     double roll = asin(R_wi(2,1));
     double yaw = atan2(-R_wi(0,1)/cos(roll),R_wi(1,1)/cos(roll));
@@ -89,10 +89,7 @@ void odom_callback(const nav_msgs::Odometry::ConstPtr &msg)
         T_wi.z(),
         roll,
         pitch,
-        yaw,
-        0,
-        0,
-        0;
+        yaw;
     std::cout<<"z = \n"<<z<<std::endl;
     ekf->update(z);
 }
@@ -123,8 +120,7 @@ int main(int argc, char **argv)
         0.05,0.05,0.05,
         0.05,0.05,0.05;
     Rt.diagonal()<<0.1,0.1,0.1,
-        0.1,0.1,0.1,
-        INFINITY,INFINITY,INFINITY; // no optflow for part 1
+        0.1,0.1,0.1; // no optflow for part 1
     cout<<"Q = \n"<<Q<<endl;
     cout<<"Rt = \n"<<Rt<<endl;
     VectorXd initial_state = VectorXd::Zero(15);

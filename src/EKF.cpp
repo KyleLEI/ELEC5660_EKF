@@ -1,5 +1,7 @@
 #include "EKF.h"
 #include <cmath>
+#include <iostream>
+using namespace std;
 
 using namespace Eigen;
 
@@ -8,8 +10,8 @@ EKF::EKF(const VectorXd is, const MatrixXd ic, const MatrixXd Q_in, const Matrix
     updateMean();
     sigma = ic;
     Q = Q_in; // 15*15
-    R = R_in; // 9*9
-    W = MatrixXd::Identity(9,9);
+    R = R_in; // 6*6 for part 1, 9*9 for part 2
+    W = MatrixXd::Identity(6,6);
 }
 
 inline void EKF::updateMean(){
@@ -209,6 +211,7 @@ MatrixXd EKF::C(){
     return C;
 }
 
+/*
 VectorXd EKF::g0(){
     VectorXd g(9);
     g<<x,y,z,roll,pitch,yaw,
@@ -218,19 +221,29 @@ VectorXd EKF::g0(){
 
     return g;
 }
+*/
+
+VectorXd EKF::g0(){
+    VectorXd g(6);
+    g<<x,y,z,roll,pitch,yaw;
+
+    return g;
+}
 
 MatrixXd EKF::K(){
-    MatrixXd K(15,9);
-    MatrixXd Ct = C();
+    MatrixXd K(15,6); // 15*6 for part 1, 15*9 for part 2
+    //MatrixXd Ct = C();
+    MatrixXd Ct = MatrixXd::Identity(6,15);
     MatrixXd Ct_T = Ct.transpose();
 
-    K = sigma_hat*Ct_T*((Ct*sigma_hat*Ct_T+W*R*W.transpose()).inverse());
+    K = sigma_hat*Ct_T*((Ct*sigma_hat*Ct_T+R).inverse());
     return K;
 }
 
 void EKF::update(const VectorXd zt){
     MatrixXd Kt = K();
-    MatrixXd Ct = C();
+    //MatrixXd Ct = C();
+    MatrixXd Ct = MatrixXd::Identity(6,15);
     mu = mu_hat + Kt*(zt - g0());
     updateMean();
     sigma = sigma_hat - Kt*Ct*sigma_hat;
