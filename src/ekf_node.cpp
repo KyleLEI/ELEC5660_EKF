@@ -31,7 +31,8 @@ void imu_callback(const sensor_msgs::Imu::ConstPtr &msg)
         msg->linear_acceleration.x,
         msg->linear_acceleration.y,
         msg->linear_acceleration.z;
-    cout<<"Predict =\n"<<ekf->predict(u,imu_time-last_imu_time)<<endl;
+    //cout<<"Predict =\n"<<ekf->predict(u,imu_time-last_imu_time)<<endl;
+    ekf->predict(u,imu_time-last_imu_time);
     last_imu_time = imu_time;
 }
 
@@ -90,8 +91,22 @@ void odom_callback(const nav_msgs::Odometry::ConstPtr &msg)
         roll,
         pitch,
         yaw;
-    std::cout<<"z = \n"<<z<<std::endl;
+    //std::cout<<"z = \n"<<z<<std::endl;
     ekf->update(z);
+    std::cout<<"sigma =\n"<<ekf->getCovariance().diagonal()<<std::endl;
+    std::cout<<"mu =\n"<<ekf->getMean()<<std::endl<<std::endl;
+
+    Quaterniond Q_ekf(1,0,0,0);
+    nav_msgs::Odometry odom_ekf;
+    odom_ekf.header.frame_id = "world";
+    odom_ekf.pose.pose.position.x = ekf->getMean()(0);
+    odom_ekf.pose.pose.position.y = ekf->getMean()(1);
+    odom_ekf.pose.pose.position.z = ekf->getMean()(2);
+    odom_ekf.pose.pose.orientation.w = Q_ekf.w();
+    odom_ekf.pose.pose.orientation.x = Q_ekf.x();
+    odom_ekf.pose.pose.orientation.y = Q_ekf.y();
+    odom_ekf.pose.pose.orientation.z = Q_ekf.z();
+    odom_pub.publish(odom_ekf);
 }
 
 int main(int argc, char **argv)
@@ -103,8 +118,6 @@ int main(int argc, char **argv)
     odom_pub = n.advertise<nav_msgs::Odometry>("ekf_odom", 100);
     R_ic = Quaterniond(0, 1, 0, 0).toRotationMatrix();
     T_ic<<0.05,0.05,0;
-    cout << "R_ic =\n" << R_ic << endl;
-    cout<<"T_ic = \n"<<T_ic<<endl;
     // Q imu covariance matrix; Rt visual odomtry covariance matrix
     // You should also tune these parameters
     /*
@@ -114,19 +127,17 @@ int main(int argc, char **argv)
     Rt.bottomRightCorner(6, 6) = 0.1 * Rt.bottomRightCorner(6, 6);
     Rt.bottomRightCorner(1, 1) = 0.1 * Rt.bottomRightCorner(1, 1);
     */
-    Q.diagonal()<<0.01,0.01,0.01,
+    Q.diagonal()<<
+        0.01,0.01,0.01,
         0.01,0.01,0.01,
         0.1,0.1,0.1,
         0.05,0.05,0.05,
         0.05,0.05,0.05;
-    Rt.diagonal()<<0.1,0.1,0.1,
+    Rt.diagonal()<<
+        0.1,0.1,0.1,
         0.1,0.1,0.1; // no optflow for part 1
-    cout<<"Q = \n"<<Q<<endl;
-    cout<<"Rt = \n"<<Rt<<endl;
     VectorXd initial_state = VectorXd::Zero(15);
     MatrixXd initial_cov = 0.1*MatrixXd::Identity(15,15);
-    cout<<"mu0 = \n"<<initial_state<<endl;
-    cout<<"sigma0 = \n"<<initial_cov<<endl;
 
     ekf = new EKF(initial_state,initial_cov,Q,Rt);
     

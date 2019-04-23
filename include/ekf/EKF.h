@@ -7,8 +7,8 @@ public:
     Eigen::VectorXd predict(const Eigen::VectorXd u_t, const double dt); 
     void update(const Eigen::VectorXd z_t);
 
-    //Eigen::MatrixXd getCovarianceMatrix() const{return sigma;}
-    //Eigen::VectorXd getMean() const{} 
+    Eigen::MatrixXd getCovariance() const{return sigma;}
+    Eigen::VectorXd getMean() const{return mu;} 
 
 private:
     /* Private Function */

@@ -242,9 +242,12 @@ MatrixXd EKF::K(){
 
 void EKF::update(const VectorXd zt){
     MatrixXd Kt = K();
+    //cout<<"K =\n"<<Kt<<endl;
     //MatrixXd Ct = C();
     MatrixXd Ct = MatrixXd::Identity(6,15);
+    //cout<<"mu_hat = \n"<<mu_hat<<endl;
     mu = mu_hat + Kt*(zt - g0());
+    //cout<<"mu = \n"<<mu<<endl;
     updateMean();
     sigma = sigma_hat - Kt*Ct*sigma_hat;
 }
