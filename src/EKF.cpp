@@ -1,5 +1,4 @@
 #include "EKF.h"
-#include <cmath>
 #include <iostream>
 using namespace std;
 

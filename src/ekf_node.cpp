@@ -68,8 +68,6 @@ void odom_callback(const nav_msgs::Odometry::ConstPtr &msg)
         msg->pose.pose.orientation.y,
         msg->pose.pose.orientation.z
     ).toRotationMatrix();
-    //std::cout<<"R_cw = \n"<<R_cw<<std::endl;
-    //std::cout<<"T_cw = \n"<<T_cw<<std::endl;
 
     Vector3d T_wc = -1*T_cw;
     Matrix3d R_wc = R_cw.transpose();
@@ -77,16 +75,10 @@ void odom_callback(const nav_msgs::Odometry::ConstPtr &msg)
     Matrix3d R_ci = R_ic.transpose();
    
     Matrix3d R_wi = R_wc*R_ci;
-    //std::cout<<"R_wi = \n"<<R_wi<<std::endl;
     Vector3d T_wi = R_wc*T_ci+T_wc;
-    //std::cout<<"T_wi = \n"<<T_wi<<std::endl;
     
     Vector3d rpy_pnp = EKF::util_RotToRPY(R_wi);
-    z<< T_wi.x(),
-        T_wi.y(),
-        T_wi.z(),
-        rpy_pnp;
-    //std::cout<<"z = \n"<<z<<std::endl;
+    z<< T_wi,rpy_pnp;
     ekf->update(z);
     std::cout<<"sigma =\n"<<ekf->getCovariance().diagonal()<<std::endl;
     std::cout<<"mu =\n"<<ekf->getMean()<<std::endl<<std::endl;
@@ -95,8 +87,7 @@ void odom_callback(const nav_msgs::Odometry::ConstPtr &msg)
     double x_m=m(0),y_m=m(1),z_m=m(2),roll_m=m(3),pitch_m=m(4),yaw_m=m(5);
     Vector3d rpy_m{roll_m,pitch_m,yaw_m};
     Matrix3d R_m = EKF::util_RPYToRot(rpy_m);
-    Quaterniond Q_ekf;
-    Q_ekf = R_m;
+    Quaterniond Q_ekf(R_m);
 
     nav_msgs::Odometry odom_ekf;
     odom_ekf.header.frame_id = "world";
