@@ -19,18 +19,10 @@ inline void EKF::updateMean(){
     x = mu[0];
     y = mu[1];
     z = mu[2];
-    if(mu[3]>=M_PI)
-        mu[3] -= 2*M_PI;
-    else if(mu[3]<-M_PI)
-        mu[3] += 2*M_PI;
-    if(mu[4]>=M_PI)
-        mu[4] -= 2*M_PI;
-    else if(mu[4]<-M_PI)
-        mu[4] += 2*M_PI;
-    if(mu[5]>=M_PI)
-        mu[5] -= 2*M_PI;
-    else if(mu[5]<-M_PI)
-        mu[5] += 2*M_PI;
+    
+    mu[3] = util_EulerRange(mu[3]);
+    mu[4] = util_EulerRange(mu[4]);
+    mu[5] = util_EulerRange(mu[5]);
     roll = mu[3];
     pitch = mu[4];
     yaw = mu[5];
@@ -269,7 +261,7 @@ void EKF::update(const VectorXd zt){
     //cout<<"zt-g0() = \n"<<zt-g0()<<endl;
     mu += Kt*(zt - g0());
     updateMean();
-    cout<<"mu = \n"<<mu<<endl;
+    //cout<<"mu = \n"<<mu<<endl;
     //mu_hat = mu;
     //sigma = sigma_hat - Kt*Ct*sigma_hat;
     //sigma_hat = sigma;

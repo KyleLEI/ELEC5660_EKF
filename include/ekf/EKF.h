@@ -11,7 +11,7 @@ public:
     Eigen::MatrixXd getCovariance() const{return sigma;}
     Eigen::VectorXd getMean() const{return mu;} 
 
-    static Eigen::Vector3d util_RotToRPY(Eigen::Matrix3d R){
+    inline static Eigen::Vector3d util_RotToRPY(Eigen::Matrix3d R){
         Eigen::Vector3d rpy;
 
         double roll = asin(R(2,1));
@@ -21,7 +21,7 @@ public:
 
         return rpy;
     }
-    static Eigen::Matrix3d util_RPYToRot(Eigen::Vector3d rpy){
+    inline static Eigen::Matrix3d util_RPYToRot(Eigen::Vector3d rpy){
         Eigen::Matrix3d Rot;
         double roll=rpy(0),pitch=rpy(1),yaw=rpy(2);
 
@@ -36,6 +36,13 @@ public:
             cos(pitch)*cos(roll);
 
         return Rot;
+    }
+    inline static double util_EulerRange(double in){
+        if(in>=M_PI)
+            in -= 2*M_PI;
+        else if (in<-M_PI)
+            in += 2*M_PI;
+        return in;
     }
 
 private:

@@ -81,13 +81,12 @@ void odom_callback(const nav_msgs::Odometry::ConstPtr &msg)
     Vector3d T_wi = R_wc*T_ci+T_wc;
     
     Vector3d rpy_pnp = EKF::util_RotToRPY(R_wi);
-    cout<<"Z rpy = \n"<<rpy_pnp/M_PI*180<<endl;
+    //cout<<"Z rpy = \n"<<rpy_pnp/M_PI*180<<endl;
     //cout<<"Z trans = \n"<<T_wi<<endl;
     z<< T_wi,rpy_pnp;
     if(ekf==nullptr){// not initialized
         VectorXd initial_state(15);
         initial_state<<z,VectorXd::Zero(9);
-        //MatrixXd initial_cov = 0.5*MatrixXd::Identity(15,15);
         MatrixXd initial_cov = MatrixXd::Zero(15,15);
         initial_cov.diagonal()<<
             0.01,0.01,0.01,
@@ -97,12 +96,12 @@ void odom_callback(const nav_msgs::Odometry::ConstPtr &msg)
             0.1,0.1,0.1;
 
         ekf = new EKF(initial_state,initial_cov,Q,Rt);
-        //return;
+        return;
     }
     ekf->update(z);
     //std::cout<<"z = \n"<<z<<std::endl;
-    //std::cout<<"sigma =\n"<<ekf->getCovariance().diagonal()<<std::endl;
-    //std::cout<<"mu =\n"<<ekf->getMean()<<std::endl<<std::endl;
+    std::cout<<"sigma =\n"<<ekf->getCovariance().diagonal()<<std::endl;
+    std::cout<<"mu =\n"<<ekf->getMean()<<std::endl<<std::endl;
 
     VectorXd m = ekf->getMean();
     double x_m=m(0),y_m=m(1),z_m=m(2),roll_m=m(3),pitch_m=m(4),yaw_m=m(5);
