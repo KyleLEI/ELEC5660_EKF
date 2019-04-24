@@ -251,3 +251,4 @@ void EKF::update(const VectorXd zt){
     updateMean();
     sigma = sigma_hat - Kt*Ct*sigma_hat;
 }
+

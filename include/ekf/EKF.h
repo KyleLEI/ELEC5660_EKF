@@ -1,4 +1,5 @@
 #include <Eigen/Eigen>
+#include <cmath>
 
 class EKF{
 public:
@@ -9,6 +10,33 @@ public:
 
     Eigen::MatrixXd getCovariance() const{return sigma;}
     Eigen::VectorXd getMean() const{return mu;} 
+
+    static Eigen::Vector3d util_RotToRPY(Eigen::Matrix3d R){
+        Eigen::Vector3d rpy;
+
+        double roll = asin(R(2,1));
+        double yaw = atan2(-R(0,1)/cos(roll),R(1,1)/cos(roll));
+        double pitch = atan2(-R(2,0)/cos(roll),R(2,2)/cos(roll));
+        rpy<<roll,pitch,yaw;
+
+        return rpy;
+    }
+    static Eigen::Matrix3d util_RPYToRot(Eigen::Vector3d rpy){
+        Eigen::Matrix3d Rot;
+        double roll=rpy(0),pitch=rpy(1),yaw=rpy(2);
+
+        Rot<<cos(pitch)*cos(yaw) - sin(pitch)*sin(roll)*sin(yaw),
+            -cos(roll)*sin(yaw),
+            cos(yaw)*sin(pitch) + cos(pitch)*sin(roll)*sin(yaw),
+            cos(pitch)*sin(yaw) + cos(yaw)*sin(pitch)*sin(roll),
+            cos(roll)*cos(yaw),
+            sin(pitch)*sin(yaw) - cos(pitch)*cos(yaw)*sin(roll),
+            -cos(roll)*sin(pitch),
+            sin(roll),
+            cos(pitch)*cos(roll);
+
+        return Rot;
+    }
 
 private:
     /* Private Function */

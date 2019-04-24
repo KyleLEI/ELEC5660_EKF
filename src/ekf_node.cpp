@@ -80,28 +80,29 @@ void odom_callback(const nav_msgs::Odometry::ConstPtr &msg)
     //std::cout<<"R_wi = \n"<<R_wi<<std::endl;
     Vector3d T_wi = R_wc*T_ci+T_wc;
     //std::cout<<"T_wi = \n"<<T_wi<<std::endl;
-
-    double roll = asin(R_wi(2,1));
-    double yaw = atan2(-R_wi(0,1)/cos(roll),R_wi(1,1)/cos(roll));
-    double pitch = atan2(-R_wi(2,0)/cos(roll),R_wi(2,2)/cos(roll));
     
+    Vector3d rpy_pnp = EKF::util_RotToRPY(R_wi);
     z<< T_wi.x(),
         T_wi.y(),
         T_wi.z(),
-        roll,
-        pitch,
-        yaw;
+        rpy_pnp;
     //std::cout<<"z = \n"<<z<<std::endl;
     ekf->update(z);
     std::cout<<"sigma =\n"<<ekf->getCovariance().diagonal()<<std::endl;
     std::cout<<"mu =\n"<<ekf->getMean()<<std::endl<<std::endl;
 
-    Quaterniond Q_ekf(1,0,0,0);
+    VectorXd m = ekf->getMean();
+    double x_m=m(0),y_m=m(1),z_m=m(2),roll_m=m(3),pitch_m=m(4),yaw_m=m(5);
+    Vector3d rpy_m{roll_m,pitch_m,yaw_m};
+    Matrix3d R_m = EKF::util_RPYToRot(rpy_m);
+    Quaterniond Q_ekf;
+    Q_ekf = R_m;
+
     nav_msgs::Odometry odom_ekf;
     odom_ekf.header.frame_id = "world";
-    odom_ekf.pose.pose.position.x = ekf->getMean()(0);
-    odom_ekf.pose.pose.position.y = ekf->getMean()(1);
-    odom_ekf.pose.pose.position.z = ekf->getMean()(2);
+    odom_ekf.pose.pose.position.x = x_m;
+    odom_ekf.pose.pose.position.y = y_m;
+    odom_ekf.pose.pose.position.z = z_m;
     odom_ekf.pose.pose.orientation.w = Q_ekf.w();
     odom_ekf.pose.pose.orientation.x = Q_ekf.x();
     odom_ekf.pose.pose.orientation.y = Q_ekf.y();
