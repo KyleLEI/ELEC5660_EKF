@@ -120,12 +120,19 @@ void odom_callback(const nav_msgs::Odometry::ConstPtr &msg)
     odom_pub.publish(odom_ekf);
 }
 
+void optflow_callback(const nav_msgs::Odometry::ConstPtr &msg){
+    double  of_vx = msg->twist.twist.linear.x,
+            of_vy = msg->twist.twist.linear.y,
+            of_z = msg->pose.pose.position.z;
+}
+
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "ekf");
     ros::NodeHandle n("~");
     ros::Subscriber s1 = n.subscribe("imu", 1000, imu_callback);
     ros::Subscriber s2 = n.subscribe("tag_odom", 1000, odom_callback);
+    ros::Subscriber s3 = n.subscribe("optflow_odom",1000,optflow_callback);
     odom_pub = n.advertise<nav_msgs::Odometry>("ekf_odom", 100);
     R_ic = Quaterniond(0, 1, 0, 0).toRotationMatrix();
     T_ic<<0.05,0.05,0;
