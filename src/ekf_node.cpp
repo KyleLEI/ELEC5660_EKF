@@ -99,9 +99,8 @@ void odom_callback(const nav_msgs::Odometry::ConstPtr &msg)
         return;
     }
     ekf->update(z);
-    //std::cout<<"z = \n"<<z<<std::endl;
-    std::cout<<"sigma =\n"<<ekf->getCovariance().diagonal()<<std::endl;
-    std::cout<<"mu =\n"<<ekf->getMean()<<std::endl<<std::endl;
+    //std::cout<<"sigma =\n"<<ekf->getCovariance().diagonal()<<std::endl;
+    //std::cout<<"mu =\n"<<ekf->getMean()<<std::endl<<std::endl;
 
     VectorXd m = ekf->getMean();
     double x_m=m(0),y_m=m(1),z_m=m(2),roll_m=m(3),pitch_m=m(4),yaw_m=m(5);
@@ -141,7 +140,7 @@ int main(int argc, char **argv)
     */
     Q.diagonal()<<
         0.01,0.01,0.01,
-        100,100,100,
+        0.01,0.01,0.01,
         0.01,0.01,0.01,
         0.1,0.1,0.1,
         0.1,0.1,0.1;

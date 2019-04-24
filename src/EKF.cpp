@@ -253,9 +253,13 @@ void EKF::update(const VectorXd zt){
     MatrixXd Kt = K();
     //MatrixXd Ct = C();
     MatrixXd Ct = MatrixXd::Identity(6,15);
-    cout<<"g0() = \n"<<g0()<<endl;
-    cout<<"zt-g0() = \n"<<zt-g0()<<endl;
-    mu += Kt*(zt - g0());
+    /* Deal with Euler angle discontinuity */
+    VectorXd tmp = zt-g0();
+    tmp(3)=util_EulerRange(tmp(3));
+    tmp(4)=util_EulerRange(tmp(4));
+    tmp(5)=util_EulerRange(tmp(5));
+    cout<<"tmp = \n"<<tmp<<endl;
+    mu += Kt*tmp;
     updateMean();
     //mu_hat = mu;
     //sigma = sigma_hat - Kt*Ct*sigma_hat;
