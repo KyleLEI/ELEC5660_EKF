@@ -99,8 +99,8 @@ void odom_callback(const nav_msgs::Odometry::ConstPtr &msg)
         return;
     }
     ekf->update(z);
-    //std::cout<<"sigma =\n"<<ekf->getCovariance().diagonal()<<std::endl;
-    //std::cout<<"mu =\n"<<ekf->getMean()<<std::endl<<std::endl;
+    std::cout<<"sigma =\n"<<ekf->getCovariance().diagonal()<<std::endl;
+    std::cout<<"mu =\n"<<ekf->getMean()<<std::endl<<std::endl;
 
     VectorXd m = ekf->getMean();
     double x_m=m(0),y_m=m(1),z_m=m(2),roll_m=m(3),pitch_m=m(4),yaw_m=m(5);
@@ -110,9 +110,9 @@ void odom_callback(const nav_msgs::Odometry::ConstPtr &msg)
 
     nav_msgs::Odometry odom_ekf;
     odom_ekf.header.frame_id = "world";
-    odom_ekf.pose.pose.position.x = x_m;
-    odom_ekf.pose.pose.position.y = y_m;
-    odom_ekf.pose.pose.position.z = z_m;
+    odom_ekf.pose.pose.position.x = -x_m;
+    odom_ekf.pose.pose.position.y = -y_m;
+    odom_ekf.pose.pose.position.z = -z_m;
     odom_ekf.pose.pose.orientation.w = Q_ekf.w();
     odom_ekf.pose.pose.orientation.x = Q_ekf.x();
     odom_ekf.pose.pose.orientation.y = Q_ekf.y();
@@ -139,14 +139,14 @@ int main(int argc, char **argv)
     Rt.bottomRightCorner(1, 1) = 0.1 * Rt.bottomRightCorner(1, 1);
     */
     Q.diagonal()<<
-        0.01,0.01,0.01,
-        0.01,0.01,0.01,
-        0.01,0.01,0.01,
-        0.1,0.1,0.1,
-        0.1,0.1,0.1;
+        0.01,0.01,0.01, // no effect
+        0.01,0.01,0.01, // gyro
+        0.01,0.01,0.01, // acc
+        0.05,0.05,0.05,    // gyro bias
+        0.05,0.05,0.05;    // acc bias
     Rt.diagonal()<<
-        0.01,0.01,0.01,
-        0.01,0.01,0.01; // no optflow for part 1
+        0.01,0.01,0.01, // PnP position
+        0.01,0.01,0.01; // PnP orientation
         
     ros::spin();
 }

@@ -19,7 +19,8 @@ inline void EKF::updateMean(){
     x = mu[0];
     y = mu[1];
     z = mu[2];
-    
+   
+    /* Deal with Euler angle discontinuity */
     mu[3] = util_EulerRange(mu[3]);
     mu[4] = util_EulerRange(mu[4]);
     mu[5] = util_EulerRange(mu[5]);
@@ -258,7 +259,7 @@ void EKF::update(const VectorXd zt){
     tmp(3)=util_EulerRange(tmp(3));
     tmp(4)=util_EulerRange(tmp(4));
     tmp(5)=util_EulerRange(tmp(5));
-    cout<<"tmp = \n"<<tmp<<endl;
+    //cout<<"tmp = \n"<<tmp<<endl;
     mu += Kt*tmp;
     updateMean();
     //mu_hat = mu;
