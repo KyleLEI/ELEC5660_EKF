@@ -34,7 +34,7 @@ void imu_callback(const sensor_msgs::Imu::ConstPtr &msg)
         msg->linear_acceleration.y,
         msg->linear_acceleration.z;
     //cout<<"Predict =\n"<<ekf->predict(u,imu_time-last_imu_time)<<endl;
-    ekf->predict(u,imu_time-last_imu_time);
+    //ekf->predict(u,imu_time-last_imu_time);
     last_imu_time = imu_time;
 }
 
@@ -81,6 +81,7 @@ void odom_callback(const nav_msgs::Odometry::ConstPtr &msg)
     Vector3d T_wi = R_wc*T_ci+T_wc;
     
     Vector3d rpy_pnp = EKF::util_RotToRPY(R_wi);
+    cout<<"Z rpy = \n"<<rpy_pnp/M_PI*180<<endl;
     z<< T_wi,rpy_pnp;
     if(ekf==nullptr){// not initialized
         VectorXd initial_state(15);
@@ -95,12 +96,12 @@ void odom_callback(const nav_msgs::Odometry::ConstPtr &msg)
             0.1,0.1,0.1;
 
         ekf = new EKF(initial_state,initial_cov,Q,Rt);
-        return;
+        //return;
     }
     //ekf->update(z);
-    std::cout<<"z = \n"<<z<<std::endl;
-    std::cout<<"sigma =\n"<<ekf->getCovariance().diagonal()<<std::endl;
-    std::cout<<"mu =\n"<<ekf->getMean()<<std::endl<<std::endl;
+    //std::cout<<"z = \n"<<z<<std::endl;
+    //std::cout<<"sigma =\n"<<ekf->getCovariance().diagonal()<<std::endl;
+    //std::cout<<"mu =\n"<<ekf->getMean()<<std::endl<<std::endl;
 
     VectorXd m = ekf->getMean();
     double x_m=m(0),y_m=m(1),z_m=m(2),roll_m=m(3),pitch_m=m(4),yaw_m=m(5);
@@ -140,8 +141,8 @@ int main(int argc, char **argv)
     */
     Q.diagonal()<<
         0.01,0.01,0.01,
-        0.01,0.01,0.01,
-        0.1,0.1,0.1,
+        100,100,100,
+        100,100,100,
         0.05,0.05,0.05,
         0.05,0.05,0.05;
     Rt.diagonal()<<
