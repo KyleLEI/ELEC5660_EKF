@@ -33,8 +33,8 @@ void imu_callback(const sensor_msgs::Imu::ConstPtr &msg)
         msg->linear_acceleration.x,
         msg->linear_acceleration.y,
         msg->linear_acceleration.z;
-    //cout<<"Predict =\n"<<ekf->predict(u,imu_time-last_imu_time)<<endl;
-    ekf->predict(u,imu_time-last_imu_time);
+    cout<<"Predict =\n"<<ekf->predict(u,imu_time-last_imu_time)<<endl;
+    //ekf->predict(u,imu_time-last_imu_time);
     last_imu_time = imu_time;
 }
 
@@ -98,6 +98,7 @@ void odom_callback(const nav_msgs::Odometry::ConstPtr &msg)
         return;
     }
     ekf->update(z);
+    std::cout<<"z = \n"<<z<<std::endl;
     std::cout<<"sigma =\n"<<ekf->getCovariance().diagonal()<<std::endl;
     std::cout<<"mu =\n"<<ekf->getMean()<<std::endl<<std::endl;
 
@@ -144,8 +145,8 @@ int main(int argc, char **argv)
         0.05,0.05,0.05,
         0.05,0.05,0.05;
     Rt.diagonal()<<
-        0.1,0.1,0.1,
-        0.1,0.1,0.1; // no optflow for part 1
+        0.01,0.01,0.01,
+        0.01,0.01,0.01; // no optflow for part 1
         
     ros::spin();
 }

@@ -4,10 +4,12 @@ using namespace std;
 
 using namespace Eigen;
 
-EKF::EKF(const VectorXd is, const MatrixXd ic, const MatrixXd Q_in, const MatrixXd R_in):sigma_hat(15,15),mu_hat(15){
+EKF::EKF(const VectorXd is, const MatrixXd ic, const MatrixXd Q_in, const MatrixXd R_in){
     mu = is;
+    mu_hat = mu;
     updateMean();
     sigma = ic;
+    sigma_hat = sigma;
     Q = Q_in; // 15*15
     R = R_in; // 6*6 for part 1, 9*9 for part 2
     W = MatrixXd::Identity(6,6);
@@ -17,6 +19,18 @@ inline void EKF::updateMean(){
     x = mu[0];
     y = mu[1];
     z = mu[2];
+    if(mu[3]>M_PI)
+        mu[3] -= 2*M_PI;
+    else if(mu[3]<M_PI)
+        mu[3] += 2*M_PI;
+    if(mu[4]>M_PI)
+        mu[4] -= 2*M_PI;
+    else if(mu[4]<M_PI)
+        mu[4] += 2*M_PI;
+    if(mu[5]>M_PI)
+        mu[5] -= 2*M_PI;
+    else if(mu[5]<M_PI)
+        mu[5] += 2*M_PI;
     roll = mu[3];
     pitch = mu[4];
     yaw = mu[5];
@@ -151,7 +165,7 @@ VectorXd EKF::f0(){
         (sin(pitch)*(bgx - wx))/cos(roll) - (cos(pitch)*(bgz - wz))/cos(roll),
         (ax - bax)*(cos(pitch)*cos(yaw) - sin(pitch)*sin(roll)*sin(yaw)) + (az - baz)*(cos(yaw)*sin(pitch) + cos(pitch)*sin(roll)*sin(yaw)) - cos(roll)*sin(yaw)*(ay - bay),
         (ax - bax)*(cos(pitch)*sin(yaw) + cos(yaw)*sin(pitch)*sin(roll)) + (az - baz)*(sin(pitch)*sin(yaw) - cos(pitch)*cos(yaw)*sin(roll)) + cos(roll)*cos(yaw)*(ay - bay),
-        sin(roll)*(ay - bay) + cos(pitch)*cos(roll)*(az - baz) - cos(roll)*sin(pitch)*(ax - bax) - 9.81,
+        sin(roll)*(ay - bay) + cos(pitch)*cos(roll)*(az - baz) - cos(roll)*sin(pitch)*(ax - bax) + 9.81,
         0,0,0,0,0,0;
     return f;
 }
@@ -168,11 +182,14 @@ VectorXd EKF::predict(const VectorXd u, const double dt){
     MatrixXd Ft = F(dt);
     MatrixXd Vt = V(dt); 
     /* Estimate mean */
-    mu_hat = mu + dt*f0(); // mu here is mu_(t-1)
+    //mu_hat = mu + dt*f0(); // mu here is mu_(t-1)
+    mu += dt*f0();
+    updateMean();
 
     /* Estimate coveriance */
-    sigma_hat = Ft*sigma*(Ft.transpose())+Vt*Q*(Vt.transpose());
-    return mu_hat;
+    //sigma_hat = Ft*sigma*(Ft.transpose())+Vt*Q*(Vt.transpose());
+    sigma = Ft*sigma*(Ft.transpose())+Vt*Q*(Vt.transpose());
+    return mu;
 }
 
 MatrixXd EKF::C(){
@@ -235,7 +252,8 @@ MatrixXd EKF::K(){
     MatrixXd Ct = MatrixXd::Identity(6,15);
     MatrixXd Ct_T = Ct.transpose();
 
-    K = sigma_hat*Ct_T*((Ct*sigma_hat*Ct_T+R).inverse());
+    //K = sigma_hat*Ct_T*((Ct*sigma_hat*Ct_T+R).inverse());
+    K = sigma*Ct_T*((Ct*sigma*Ct_T+R).inverse());
     return K;
 }
 
@@ -245,9 +263,13 @@ void EKF::update(const VectorXd zt){
     //MatrixXd Ct = C();
     MatrixXd Ct = MatrixXd::Identity(6,15);
     //cout<<"mu_hat = \n"<<mu_hat<<endl;
-    mu = mu_hat + Kt*(zt - g0());
+    //mu = mu_hat + Kt*(zt - g0());
+    mu += Kt*(zt - g0());
     //cout<<"mu = \n"<<mu<<endl;
     updateMean();
-    sigma = sigma_hat - Kt*Ct*sigma_hat;
+    //mu_hat = mu;
+    //sigma = sigma_hat - Kt*Ct*sigma_hat;
+    //sigma_hat = sigma;
+    sigma = sigma - Kt*Ct*sigma;
 }
 
