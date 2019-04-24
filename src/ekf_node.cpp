@@ -8,7 +8,7 @@
 
 #include "EKF.h"
 
-EKF* ekf;
+EKF* ekf=nullptr;
 using namespace std;
 using namespace Eigen;
 ros::Publisher odom_pub;
@@ -18,6 +18,8 @@ double imu_time, last_imu_time=-1.0;
 
 void imu_callback(const sensor_msgs::Imu::ConstPtr &msg)
 {
+    if(ekf==nullptr)
+        return;
     //your code for propagation
     if(last_imu_time<0){//not initialized
         last_imu_time = msg->header.stamp.toSec();
@@ -55,6 +57,7 @@ void odom_callback(const nav_msgs::Odometry::ConstPtr &msg)
     //                     RotationMatrix << -1, 0, 0,
     //                                       0, -1, 0,
     // 
+    
     VectorXd z(6);
 
     Vector3d T_cw;
@@ -79,6 +82,21 @@ void odom_callback(const nav_msgs::Odometry::ConstPtr &msg)
     
     Vector3d rpy_pnp = EKF::util_RotToRPY(R_wi);
     z<< T_wi,rpy_pnp;
+    if(ekf==nullptr){// not initialized
+        VectorXd initial_state(15);
+        initial_state<<z,VectorXd::Zero(9);
+        //MatrixXd initial_cov = 0.5*MatrixXd::Identity(15,15);
+        MatrixXd initial_cov = MatrixXd::Zero(15,15);
+        initial_cov.diagonal()<<
+            0.01,0.01,0.01,
+            0.01,0.01,0.01,
+            0.05,0.05,0.05,
+            0.1,0.1,0.1,
+            0.1,0.1,0.1;
+
+        ekf = new EKF(initial_state,initial_cov,Q,Rt);
+        return;
+    }
     ekf->update(z);
     std::cout<<"sigma =\n"<<ekf->getCovariance().diagonal()<<std::endl;
     std::cout<<"mu =\n"<<ekf->getMean()<<std::endl<<std::endl;
@@ -128,10 +146,6 @@ int main(int argc, char **argv)
     Rt.diagonal()<<
         0.1,0.1,0.1,
         0.1,0.1,0.1; // no optflow for part 1
-    VectorXd initial_state = VectorXd::Zero(15);
-    MatrixXd initial_cov = 0.1*MatrixXd::Identity(15,15);
-
-    ekf = new EKF(initial_state,initial_cov,Q,Rt);
-    
+        
     ros::spin();
 }
