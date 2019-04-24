@@ -19,17 +19,17 @@ inline void EKF::updateMean(){
     x = mu[0];
     y = mu[1];
     z = mu[2];
-    if(mu[3]>M_PI)
+    if(mu[3]>=M_PI)
         mu[3] -= 2*M_PI;
-    else if(mu[3]<M_PI)
+    else if(mu[3]<-M_PI)
         mu[3] += 2*M_PI;
-    if(mu[4]>M_PI)
+    if(mu[4]>=M_PI)
         mu[4] -= 2*M_PI;
-    else if(mu[4]<M_PI)
+    else if(mu[4]<-M_PI)
         mu[4] += 2*M_PI;
-    if(mu[5]>M_PI)
+    if(mu[5]>=M_PI)
         mu[5] -= 2*M_PI;
-    else if(mu[5]<M_PI)
+    else if(mu[5]<-M_PI)
         mu[5] += 2*M_PI;
     roll = mu[3];
     pitch = mu[4];
@@ -264,9 +264,12 @@ void EKF::update(const VectorXd zt){
     MatrixXd Ct = MatrixXd::Identity(6,15);
     //cout<<"mu_hat = \n"<<mu_hat<<endl;
     //mu = mu_hat + Kt*(zt - g0());
+    //cout<<"zt =\n"<<zt<<endl;
+    //cout<<"g0() = \n"<<g0()<<endl;
+    //cout<<"zt-g0() = \n"<<zt-g0()<<endl;
     mu += Kt*(zt - g0());
-    //cout<<"mu = \n"<<mu<<endl;
     updateMean();
+    cout<<"mu = \n"<<mu<<endl;
     //mu_hat = mu;
     //sigma = sigma_hat - Kt*Ct*sigma_hat;
     //sigma_hat = sigma;
