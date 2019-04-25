@@ -242,7 +242,7 @@ inline Vector3d EKF::g2(){
     return Vector3d{vx,vy,z};
 }
 
-MatrixXd EKF::K(const MatrixXd& C){
+inline MatrixXd EKF::K(const MatrixXd& C){
     MatrixXd Ct = C;
     MatrixXd Ct_T = Ct.transpose();
     return sigma*Ct_T*((Ct*sigma*Ct_T+R).inverse());

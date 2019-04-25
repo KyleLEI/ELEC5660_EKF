@@ -13,7 +13,8 @@ using namespace std;
 using namespace Eigen;
 ros::Publisher odom_pub;
 MatrixXd Q = MatrixXd::Identity(15, 15);
-MatrixXd Rt = MatrixXd::Identity(6,6);
+//MatrixXd Rt = MatrixXd::Identity(6,6);
+MatrixXd Rt = MatrixXd::Identity(3,3);
 double imu_time, last_imu_time=-1.0; 
 
 void imu_callback(const sensor_msgs::Imu::ConstPtr &msg)
@@ -33,8 +34,8 @@ void imu_callback(const sensor_msgs::Imu::ConstPtr &msg)
         msg->linear_acceleration.x,
         msg->linear_acceleration.y,
         msg->linear_acceleration.z;
-    cout<<"Predict =\n"<<ekf->predict(u,imu_time-last_imu_time)<<endl;
-    //ekf->predict(u,imu_time-last_imu_time);
+    //cout<<"Predict =\n"<<ekf->predict(u,imu_time-last_imu_time)<<endl;
+    ekf->predict(u,imu_time-last_imu_time);
     last_imu_time = imu_time;
 }
 
@@ -124,6 +125,26 @@ void optflow_callback(const nav_msgs::Odometry::ConstPtr &msg){
     double  of_vx = msg->twist.twist.linear.x,
             of_vy = msg->twist.twist.linear.y,
             of_z = msg->pose.pose.position.z;
+    if(ekf==nullptr){
+        VectorXd initial_state = VectorXd::Zero(15);
+        initial_state(2) = of_z;
+        MatrixXd initial_cov = MatrixXd::Zero(15,15);
+        initial_cov.diagonal()<<
+            0.01,0.01,0.01,
+            0.01,0.01,0.01,
+            0.05,0.05,0.05,
+            0.1,0.1,0.1,
+            0.1,0.1,0.1;
+
+        ekf = new EKF(initial_state,initial_cov,Q,Rt);
+        return;
+    }
+
+    Vector3d z{of_vx,of_vy,of_z};
+    ekf->update2(z);
+    std::cout<<"sigma =\n"<<ekf->getCovariance().diagonal()<<std::endl;
+    std::cout<<"mu =\n"<<ekf->getMean()<<std::endl<<std::endl;
+
 }
 
 int main(int argc, char **argv)
@@ -151,9 +172,11 @@ int main(int argc, char **argv)
         0.01,0.01,0.01, // acc
         0.05,0.05,0.05,    // gyro bias
         0.05,0.05,0.05;    // acc bias
+    //Rt.diagonal()<<
+    //    0.01,0.01,0.01, // PnP position
+    //    0.01,0.01,0.01; // PnP orientation
     Rt.diagonal()<<
-        0.01,0.01,0.01, // PnP position
-        0.01,0.01,0.01; // PnP orientation
+        0.1,0.1,0.005; // optflow vx vy h
         
     ros::spin();
 }
