@@ -33,8 +33,8 @@ void imu_callback(const sensor_msgs::Imu::ConstPtr &msg)
         msg->linear_acceleration.x,
         msg->linear_acceleration.y,
         msg->linear_acceleration.z;
-    //cout<<"Predict =\n"<<ekf->predict(u,imu_time-last_imu_time)<<endl;
-    ekf->predict(u,imu_time-last_imu_time);
+    cout<<"Predict =\n"<<ekf->predict(u,imu_time-last_imu_time)<<endl;
+    //ekf->predict(u,imu_time-last_imu_time);
     last_imu_time = imu_time;
 }
 
@@ -98,7 +98,7 @@ void odom_callback(const nav_msgs::Odometry::ConstPtr &msg)
         ekf = new EKF(initial_state,initial_cov,Q,Rt);
         return;
     }
-    ekf->update(z);
+    ekf->update1(z);
     std::cout<<"sigma =\n"<<ekf->getCovariance().diagonal()<<std::endl;
     std::cout<<"mu =\n"<<ekf->getMean()<<std::endl<<std::endl;
 
@@ -131,11 +131,11 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "ekf");
     ros::NodeHandle n("~");
     ros::Subscriber s1 = n.subscribe("imu", 1000, imu_callback);
-    ros::Subscriber s2 = n.subscribe("tag_odom", 1000, odom_callback);
+    //ros::Subscriber s2 = n.subscribe("tag_odom", 1000, odom_callback);
     ros::Subscriber s3 = n.subscribe("optflow_odom",1000,optflow_callback);
     odom_pub = n.advertise<nav_msgs::Odometry>("ekf_odom", 100);
-    R_ic = Quaterniond(0, 1, 0, 0).toRotationMatrix();
-    T_ic<<0.05,0.05,0;
+    R_ic = Quaterniond(0, 0, 0, 1).toRotationMatrix();
+    T_ic<<0.1, 0, 0.03;
     // Q imu covariance matrix; Rt visual odomtry covariance matrix
     // You should also tune these parameters
     /*

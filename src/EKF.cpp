@@ -6,13 +6,15 @@ using namespace Eigen;
 
 EKF::EKF(const VectorXd is, const MatrixXd ic, const MatrixXd Q_in, const MatrixXd R_in){
     mu = is;
-    mu_hat = mu;
     updateMean();
     sigma = ic;
-    sigma_hat = sigma;
     Q = Q_in; // 15*15
     R = R_in; // 6*6 for part 1, 9*9 for part 2
-    W = MatrixXd::Identity(6,6);
+
+    /* Initialize the linear measurement matrices */
+    C1 = MatrixXd::Identity(6,15);
+    C2 = MatrixXd::Zero(3,15);
+    C2(2,2)=1;C2(0,6)=1;C2(1,7)=1;//vx,vy,z
 }
 
 inline void EKF::updateMean(){
@@ -175,17 +177,15 @@ VectorXd EKF::predict(const VectorXd u, const double dt){
     MatrixXd Ft = F(dt);
     MatrixXd Vt = V(dt); 
     /* Estimate mean */
-    //mu_hat = mu + dt*f0(); // mu here is mu_(t-1)
     mu += dt*f0();
     updateMean();
 
     /* Estimate coveriance */
-    //sigma_hat = Ft*sigma*(Ft.transpose())+Vt*Q*(Vt.transpose());
     sigma = Ft*sigma*(Ft.transpose())+Vt*Q*(Vt.transpose());
     return mu;
 }
 
-MatrixXd EKF::C(){
+MatrixXd EKF::C3(){
     MatrixXd C = MatrixXd::Identity(9,15);
 
     /* dg/droll */
@@ -232,39 +232,60 @@ VectorXd EKF::g0(){
 }
 */
 
-VectorXd EKF::g0(){
+inline VectorXd EKF::g1(){
     VectorXd g(6);
     g<<x,y,z,roll,pitch,yaw;
-
     return g;
 }
 
-MatrixXd EKF::K(){
-    MatrixXd K(15,6); // 15*6 for part 1, 15*9 for part 2
-    //MatrixXd Ct = C();
-    MatrixXd Ct = MatrixXd::Identity(6,15);
-    MatrixXd Ct_T = Ct.transpose();
-
-    //K = sigma_hat*Ct_T*((Ct*sigma_hat*Ct_T+R).inverse());
-    K = sigma*Ct_T*((Ct*sigma*Ct_T+R).inverse());
-    return K;
+inline Vector3d EKF::g2(){
+    return Vector3d{vx,vy,z};
 }
 
-void EKF::update(const VectorXd zt){
-    MatrixXd Kt = K();
-    //MatrixXd Ct = C();
-    MatrixXd Ct = MatrixXd::Identity(6,15);
+MatrixXd EKF::K(const MatrixXd& C){
+    MatrixXd Ct = C;
+    MatrixXd Ct_T = Ct.transpose();
+    return sigma*Ct_T*((Ct*sigma*Ct_T+R).inverse());
+}
+/*
+MatrixXd EKF::K1(){
+    MatrixXd K(15,6); 
+    MatrixXd Ct = C1;
+    MatrixXd Ct_T = Ct.transpose();
+
+    K = sigma*Ct_T*((Ct*sigma*Ct_T+R).inverse());
+    return K;
+}*/
+
+void EKF::update1(const VectorXd zt){
+    MatrixXd Kt = K(C1);//15*6
+
     /* Deal with Euler angle discontinuity */
-    VectorXd tmp = zt-g0();
+    VectorXd tmp = zt-g1();
     tmp(3)=util_EulerRange(tmp(3));
     tmp(4)=util_EulerRange(tmp(4));
     tmp(5)=util_EulerRange(tmp(5));
     //cout<<"tmp = \n"<<tmp<<endl;
+
     mu += Kt*tmp;
     updateMean();
-    //mu_hat = mu;
-    //sigma = sigma_hat - Kt*Ct*sigma_hat;
-    //sigma_hat = sigma;
-    sigma = sigma - Kt*Ct*sigma;
+    sigma -= Kt*C1*sigma;
 }
+/*
+MatrixXd K2(){
+    MatrixXd K(15,3);
+    MatrixXd Ct = C2;
+    MatrixXd Ct_T = Ct.transpose();
 
+    K = sigma*Ct_T*((Ct*sigma*Ct_T+R).inverse());
+   
+    return K;
+}*/
+
+void EKF::update2(const Vector3d zt){
+    MatrixXd Kt = K(C2);//15*3
+    
+    mu += Kt*(zt-g2());
+    updateMean();
+    sigma -= Kt*C2*sigma;
+}
