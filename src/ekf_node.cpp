@@ -14,7 +14,7 @@ using namespace Eigen;
 ros::Publisher odom_pub;
 MatrixXd Q = MatrixXd::Identity(15, 15);
 MatrixXd R_pnp = MatrixXd::Identity(6,6);
-MatrixXd R_optflow = MatrixXd::Identity(3,3);
+MatrixXd R_optflow = MatrixXd::Identity(6,6);
 double imu_time, last_imu_time=-1.0; 
 
 void imu_callback(const sensor_msgs::Imu::ConstPtr &msg)
@@ -119,9 +119,9 @@ void pnp_callback(const nav_msgs::Odometry::ConstPtr &msg)
         ekf = new EKF(initial_state,initial_cov,Q,R_pnp,R_optflow);
         return;
     }
-    ekf->update1(z);
+    //ekf->update1(z);
     //std::cout<<"sigma1 =\n"<<ekf->getCovariance().diagonal()<<std::endl;
-    std::cout<<"mu1 =\n"<<ekf->getMean()<<std::endl<<std::endl;
+    //std::cout<<"mu1 =\n"<<ekf->getMean()<<std::endl<<std::endl;
 
     publish_odom(ekf->getMean());
 }
@@ -129,13 +129,17 @@ void pnp_callback(const nav_msgs::Odometry::ConstPtr &msg)
 void optflow_callback(const nav_msgs::Odometry::ConstPtr &msg){
     double  of_vx = msg->twist.twist.linear.x,
             of_vy = msg->twist.twist.linear.y,
-            of_z = -msg->pose.pose.position.z;
-    Vector3d z{of_vx,of_vy,of_z};
-    z = R_ic*z;
+            of_z = msg->pose.pose.position.z;
+    Vector3d p_c{0,0,of_z},p_dot_c{of_vx,of_vy,0};
+    
+    Vector3d p_i = R_ic*p_c + T_ic;
+    Vector3d p_dot_i = R_ic*p_dot_c;
+    VectorXd z(6);
+    z<<p_i,p_dot_i;
     cout<<"z2 = \n"<<z<<endl;
     ekf->update2(z);
     //std::cout<<"sigma2 =\n"<<ekf->getCovariance().diagonal()<<std::endl;
-    //std::cout<<"mu2 =\n"<<ekf->getMean()<<std::endl<<std::endl;
+    std::cout<<"mu2 =\n"<<ekf->getMean()<<std::endl<<std::endl;
     publish_odom(ekf->getMean());
 }
 
@@ -172,9 +176,10 @@ int main(int argc, char **argv)
         0.05,0.05,0.05;    // acc bias
     R_pnp.diagonal()<<
         0.01,0.01,0.01, // PnP position
-        0.01,0.01,0.01; // PnP orientation
+        0.1,0.1,0.1; // PnP orientation
     R_optflow.diagonal()<<
-        0.1,0.1,0.005; // optflow vx vy h
+        0.1,0.1,0.1,// position
+        0.01,0.01,0.01; // vC
         
     ros::spin();
 }

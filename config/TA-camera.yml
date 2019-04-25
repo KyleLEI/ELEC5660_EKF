@@ -11,15 +11,14 @@ camera_matrix: !!opencv-matrix
    rows: 3
    cols: 3
    dt: d
-   data: [ 4.2635217318254956e+02, 0., 3.7635471031878461e+02, 0.,
-       4.2649527072106184e+02, 2.2494492772695563e+02, 0., 0., 1. ]
+   data: [ 362.565, 0., 365.486, 0.,
+       363.082, 234.889, 0., 0., 1. ]
 distortion_coefficients: !!opencv-matrix
-   rows: 5
+   rows: 4
    cols: 1
    dt: d
-   data: [ -3.2974396088878866e-01, 1.9027020703593978e-01,
-       -5.1871192330359335e-04, 5.0262242763467538e-04,
-       -8.2794819620631691e-02 ]
+   data: [ -0.278765, 0.0694761,
+       -2.86553e-05, 0.000242845 ]
 avg_reprojection_error: 9.0287884531332213e-02
 per_view_reprojection_errors: !!opencv-matrix
    rows: 41

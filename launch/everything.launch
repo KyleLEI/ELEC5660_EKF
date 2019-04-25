@@ -12,7 +12,7 @@
     <node pkg="tag_detector" type="tag_detector" name="tag_detector_node" output="log">
         <remap from="~image_raw" to="/camera/image_raw"/>
         <param name="cam_cal_file" type="string" value="$(find ekf)/config/TA-camera.yml"/>
-        <param name="board_config_file" type="string" value="$(find ekf)/config/tag_1.yml"/>
+        <param name="board_config_file" type="string" value="$(find ekf)/config/test_3-1.yml"/>
     </node>
 
 
