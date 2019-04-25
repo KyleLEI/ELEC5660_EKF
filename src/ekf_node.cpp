@@ -15,6 +15,7 @@ ros::Publisher odom_pub;
 MatrixXd Q = MatrixXd::Identity(15, 15);
 MatrixXd R_pnp = MatrixXd::Identity(6,6);
 MatrixXd R_optflow = MatrixXd::Identity(6,6);
+MatrixXd R_optflowl = MatrixXd::Identity(3,3);
 double imu_time, last_imu_time=-1.0; 
 
 void imu_callback(const sensor_msgs::Imu::ConstPtr &msg)
@@ -100,10 +101,10 @@ void pnp_callback(const nav_msgs::Odometry::ConstPtr &msg)
    
     Matrix3d R_wi = R_wm*R_mc*R_ci;
     Vector3d T_wi = R_wm*(R_mc*T_ci+T_mc)+T_wm;
-    
+        
     Vector3d rpy_pnp = EKF::util_RotToRPY(R_wi);
-    cout<<"Z rpy = \n"<<rpy_pnp/M_PI*180<<endl;
-    cout<<"Z trans = \n"<<T_wi<<endl;
+    //cout<<"Z rpy = \n"<<rpy_pnp/M_PI*180<<endl;
+    //cout<<"Z trans = \n"<<T_wi<<endl;
     z<< T_wi,rpy_pnp;
     if(ekf==nullptr){// not initialized
         VectorXd initial_state(15);
@@ -115,11 +116,10 @@ void pnp_callback(const nav_msgs::Odometry::ConstPtr &msg)
             0.05,0.05,0.05,
             0.1,0.1,0.1,
             0.1,0.1,0.1;
-
-        ekf = new EKF(initial_state,initial_cov,Q,R_pnp,R_optflow);
+        ekf = new EKF(initial_state,initial_cov,Q,R_pnp,R_optflowl);
         return;
     }
-    //ekf->update1(z);
+    ekf->update1(z);
     //std::cout<<"sigma1 =\n"<<ekf->getCovariance().diagonal()<<std::endl;
     //std::cout<<"mu1 =\n"<<ekf->getMean()<<std::endl<<std::endl;
 
@@ -127,6 +127,8 @@ void pnp_callback(const nav_msgs::Odometry::ConstPtr &msg)
 }
 
 void optflow_callback(const nav_msgs::Odometry::ConstPtr &msg){
+    if(ekf==nullptr)
+        return;
     double  of_vx = msg->twist.twist.linear.x,
             of_vy = msg->twist.twist.linear.y,
             of_z = msg->pose.pose.position.z;
@@ -134,12 +136,24 @@ void optflow_callback(const nav_msgs::Odometry::ConstPtr &msg){
     
     Vector3d p_i = R_ic*p_c + T_ic;
     Vector3d p_dot_i = R_ic*p_dot_c;
-    VectorXd z(6);
+    VectorXd z(6); 
     z<<p_i,p_dot_i;
+    //z(0)=0;z(1)=0;z(5)=0;
     cout<<"z2 = \n"<<z<<endl;
     ekf->update2(z);
     //std::cout<<"sigma2 =\n"<<ekf->getCovariance().diagonal()<<std::endl;
-    std::cout<<"mu2 =\n"<<ekf->getMean()<<std::endl<<std::endl;
+    //std::cout<<"mu2 =\n"<<ekf->getMean()<<std::endl<<std::endl;
+    publish_odom(ekf->getMean());
+}
+
+void optflow_callback_linear(const nav_msgs::Odometry::ConstPtr &msg){
+    double  of_vx = msg->twist.twist.linear.y,
+            of_vy = msg->twist.twist.linear.x,
+            of_z = msg->pose.pose.position.z;
+    Vector3d z{of_vx,of_vy,of_z};
+    ekf->update2l(z);
+    //std::cout<<"sigma =\n"<<ekf->getCovariance().diagonal()<<std::endl;
+    std::cout<<"mu =\n"<<ekf->getMean()<<std::endl<<std::endl;
     publish_odom(ekf->getMean());
 }
 
@@ -149,7 +163,7 @@ int main(int argc, char **argv)
     ros::NodeHandle n("~");
     ros::Subscriber s1 = n.subscribe("imu", 1000, imu_callback);
     ros::Subscriber s2 = n.subscribe("tag_odom", 1000, pnp_callback);
-    ros::Subscriber s3 = n.subscribe("optflow_odom",1000,optflow_callback);
+    ros::Subscriber s3 = n.subscribe("optflow_odom",1000,optflow_callback_linear);
     odom_pub = n.advertise<nav_msgs::Odometry>("ekf_odom", 100);
     R_ic<<  0,-1,0,
             -1,0,0,
@@ -176,10 +190,12 @@ int main(int argc, char **argv)
         0.05,0.05,0.05;    // acc bias
     R_pnp.diagonal()<<
         0.01,0.01,0.01, // PnP position
-        0.1,0.1,0.1; // PnP orientation
+        0.01,0.01,0.01; // PnP orientation
     R_optflow.diagonal()<<
-        0.1,0.1,0.1,// position
-        0.01,0.01,0.01; // vC
+        1.0,1.0,0.001,// position
+        1.0,1.0,1.0; // vC
+    R_optflowl.diagonal()<<
+        0.1,0.1,0.005;// optflow vx vy h
         
     ros::spin();
 }

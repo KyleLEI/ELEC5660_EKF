@@ -14,6 +14,8 @@ EKF::EKF(const VectorXd is, const MatrixXd ic, const MatrixXd Q_in, const Matrix
 
     /* Initialize the linear measurement matrices */
     C1 = MatrixXd::Identity(6,15);
+    C2l = MatrixXd::Zero(3,15);
+    C2l(2,2)=1;C2l(0,6)=1;C2l(1,7)=1;//vx,vy,z
 }
 
 inline void EKF::updateMean(){
@@ -222,6 +224,10 @@ VectorXd EKF::g2(){
     return g;
 }
 
+inline Vector3d EKF::g2l(){
+    return Vector3d{vx,vy,z};
+}
+
 MatrixXd EKF::C2(){
     MatrixXd C = MatrixXd::Zero(6,15);
     C.row(2)<<cos(yaw)*sin(pitch) + cos(pitch)*sin(roll)*sin(yaw), 
@@ -241,7 +247,18 @@ void EKF::update2(const VectorXd zt){
     // zt is in the imu frame
     MatrixXd Kt = K(C,R_optflow);//15*3
     
-    mu += Kt*(zt-g2());
+    VectorXd tmp(6);
+    tmp = zt - g2();
+    tmp(0)=0;tmp(1)=0;tmp(5)=0;
+    cout<<"Kt*tmp =\n"<<Kt*tmp<<endl;
+    mu += Kt*tmp;
     updateMean();
     sigma -= Kt*C*sigma;
+}
+
+void EKF::update2l(const Vector3d zt){
+    MatrixXd Kt = K(C2l,R_optflow);
+    mu+=Kt*(zt-g2l());
+    updateMean();
+    sigma -= Kt*C2l*sigma;
 }
