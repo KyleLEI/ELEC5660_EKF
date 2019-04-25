@@ -39,10 +39,28 @@ void imu_callback(const sensor_msgs::Imu::ConstPtr &msg)
     last_imu_time = imu_time;
 }
 
+void publish_odom(VectorXd m){
+    double x_m=m(0),y_m=m(1),z_m=m(2),roll_m=m(3),pitch_m=m(4),yaw_m=m(5);
+    Vector3d rpy_m{roll_m,pitch_m,yaw_m};
+    Matrix3d R_m = EKF::util_RPYToRot(rpy_m);
+    Quaterniond Q_ekf(R_m);
+
+    nav_msgs::Odometry odom_ekf;
+    odom_ekf.header.frame_id = "world";
+    odom_ekf.pose.pose.position.x = x_m;
+    odom_ekf.pose.pose.position.y = y_m;
+    odom_ekf.pose.pose.position.z = z_m;
+    odom_ekf.pose.pose.orientation.w = Q_ekf.w();
+    odom_ekf.pose.pose.orientation.x = Q_ekf.x();
+    odom_ekf.pose.pose.orientation.y = Q_ekf.y();
+    odom_ekf.pose.pose.orientation.z = Q_ekf.z();
+    odom_pub.publish(odom_ekf);
+}
+
 //Rotation from the camera frame to the IMU frame
 Vector3d T_ic;
 Eigen::Matrix3d R_ic;
-void odom_callback(const nav_msgs::Odometry::ConstPtr &msg)
+void pnp_callback(const nav_msgs::Odometry::ConstPtr &msg)
 {
     //your code for update
     //For part 1
@@ -103,22 +121,8 @@ void odom_callback(const nav_msgs::Odometry::ConstPtr &msg)
     std::cout<<"sigma =\n"<<ekf->getCovariance().diagonal()<<std::endl;
     std::cout<<"mu =\n"<<ekf->getMean()<<std::endl<<std::endl;
 
-    VectorXd m = ekf->getMean();
-    double x_m=m(0),y_m=m(1),z_m=m(2),roll_m=m(3),pitch_m=m(4),yaw_m=m(5);
-    Vector3d rpy_m{roll_m,pitch_m,yaw_m};
-    Matrix3d R_m = EKF::util_RPYToRot(rpy_m);
-    Quaterniond Q_ekf(R_m);
-
-    nav_msgs::Odometry odom_ekf;
-    odom_ekf.header.frame_id = "world";
-    odom_ekf.pose.pose.position.x = -x_m;
-    odom_ekf.pose.pose.position.y = -y_m;
-    odom_ekf.pose.pose.position.z = -z_m;
-    odom_ekf.pose.pose.orientation.w = Q_ekf.w();
-    odom_ekf.pose.pose.orientation.x = Q_ekf.x();
-    odom_ekf.pose.pose.orientation.y = Q_ekf.y();
-    odom_ekf.pose.pose.orientation.z = Q_ekf.z();
-    odom_pub.publish(odom_ekf);
+    //VectorXd m = ekf->getMean();
+    publish_odom(ekf->getMean());
 }
 
 void optflow_callback(const nav_msgs::Odometry::ConstPtr &msg){
@@ -144,7 +148,7 @@ void optflow_callback(const nav_msgs::Odometry::ConstPtr &msg){
     ekf->update2(z);
     std::cout<<"sigma =\n"<<ekf->getCovariance().diagonal()<<std::endl;
     std::cout<<"mu =\n"<<ekf->getMean()<<std::endl<<std::endl;
-
+    publish_odom(ekf->getMean());
 }
 
 int main(int argc, char **argv)
@@ -152,7 +156,7 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "ekf");
     ros::NodeHandle n("~");
     ros::Subscriber s1 = n.subscribe("imu", 1000, imu_callback);
-    //ros::Subscriber s2 = n.subscribe("tag_odom", 1000, odom_callback);
+    //ros::Subscriber s2 = n.subscribe("tag_odom", 1000, pnp_callback);
     ros::Subscriber s3 = n.subscribe("optflow_odom",1000,optflow_callback);
     odom_pub = n.advertise<nav_msgs::Odometry>("ekf_odom", 100);
     R_ic = Quaterniond(0, 0, 0, 1).toRotationMatrix();
