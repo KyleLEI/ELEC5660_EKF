@@ -100,7 +100,6 @@ void pnp_callback(const nav_msgs::Odometry::ConstPtr &msg)
    
     Matrix3d R_wi = R_wm*R_mc*R_ci;
     Vector3d T_wi = R_wm*(R_mc*T_ci+T_mc)+T_wm;
-    //cout<<"R_wi =\n"<<R_wi<<endl;
     
     Vector3d rpy_pnp = EKF::util_RotToRPY(R_wi);
     cout<<"Z rpy = \n"<<rpy_pnp/M_PI*180<<endl;
@@ -121,10 +120,9 @@ void pnp_callback(const nav_msgs::Odometry::ConstPtr &msg)
         return;
     }
     ekf->update1(z);
-    std::cout<<"sigma1 =\n"<<ekf->getCovariance().diagonal()<<std::endl;
+    //std::cout<<"sigma1 =\n"<<ekf->getCovariance().diagonal()<<std::endl;
     std::cout<<"mu1 =\n"<<ekf->getMean()<<std::endl<<std::endl;
 
-    //VectorXd m = ekf->getMean();
     publish_odom(ekf->getMean());
 }
 
@@ -136,8 +134,8 @@ void optflow_callback(const nav_msgs::Odometry::ConstPtr &msg){
     z = R_ic*z;
     cout<<"z2 = \n"<<z<<endl;
     ekf->update2(z);
-    std::cout<<"sigma2 =\n"<<ekf->getCovariance().diagonal()<<std::endl;
-    std::cout<<"mu2 =\n"<<ekf->getMean()<<std::endl<<std::endl;
+    //std::cout<<"sigma2 =\n"<<ekf->getCovariance().diagonal()<<std::endl;
+    //std::cout<<"mu2 =\n"<<ekf->getMean()<<std::endl<<std::endl;
     publish_odom(ekf->getMean());
 }
 
