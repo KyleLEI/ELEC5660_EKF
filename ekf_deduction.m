@@ -6,7 +6,7 @@ syms bgx bgy bgz % gyro bias
 syms bax bay baz % acc bias
 syms wx wy wz % SENSOR: gyro measurement
 syms ax ay az % SENSOR: acc measurement
-g = sym([0 0 -9.81]'); % gravity
+g = sym([0 0 +9.81]'); % gravity
 syms ngx ngy ngz % gyro noise
 syms nax nay naz % acc noise
 syms nbgx nbgy nbgz % gyro bias noise
@@ -52,6 +52,15 @@ U = jacobian(f,n);
 Z_1 = [p;q];
 C_1 = jacobian(Z_1,X);
 g_1 = [p;q];
-Z_23 = [p;q;R'*p_dot];
-C_23 = jacobian(Z_23,X);
-g0 = [p;q;R'*p_dot];
+Z_2 = [vx;vy;z];
+% Z_3 = [p;q;R'*p_dot];
+% C_3 = jacobian(Z_3,X);
+
+g1 = [p;q];
+g2 = [R'*p-p;R'*p_dot]; % imu frame
+g2(1)=0;
+g2(2)=0;
+g2(6)=0;
+C_2 = jacobian(g2,X);
+%g2 = [vx;vy;z];
+% g3 = [p;q;R'*p_dot];
