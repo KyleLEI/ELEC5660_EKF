@@ -100,11 +100,11 @@ void pnp_callback(const nav_msgs::Odometry::ConstPtr &msg)
    
     Matrix3d R_wi = R_wm*R_mc*R_ci;
     Vector3d T_wi = R_wm*(R_mc*T_ci+T_mc)+T_wm;
-    cout<<"R_wi =\n"<<R_wi<<endl;
+    //cout<<"R_wi =\n"<<R_wi<<endl;
     
     Vector3d rpy_pnp = EKF::util_RotToRPY(R_wi);
-    //cout<<"Z rpy = \n"<<rpy_pnp/M_PI*180<<endl;
-    //cout<<"Z trans = \n"<<T_wi<<endl;
+    cout<<"Z rpy = \n"<<rpy_pnp/M_PI*180<<endl;
+    cout<<"Z trans = \n"<<T_wi<<endl;
     z<< T_wi,rpy_pnp;
     if(ekf==nullptr){// not initialized
         VectorXd initial_state(15);
@@ -121,8 +121,8 @@ void pnp_callback(const nav_msgs::Odometry::ConstPtr &msg)
         return;
     }
     ekf->update1(z);
-    std::cout<<"sigma =\n"<<ekf->getCovariance().diagonal()<<std::endl;
-    std::cout<<"mu =\n"<<ekf->getMean()<<std::endl<<std::endl;
+    std::cout<<"sigma1 =\n"<<ekf->getCovariance().diagonal()<<std::endl;
+    std::cout<<"mu1 =\n"<<ekf->getMean()<<std::endl<<std::endl;
 
     //VectorXd m = ekf->getMean();
     publish_odom(ekf->getMean());
@@ -131,12 +131,13 @@ void pnp_callback(const nav_msgs::Odometry::ConstPtr &msg)
 void optflow_callback(const nav_msgs::Odometry::ConstPtr &msg){
     double  of_vx = msg->twist.twist.linear.x,
             of_vy = msg->twist.twist.linear.y,
-            of_z = msg->pose.pose.position.z;
-    
+            of_z = -msg->pose.pose.position.z;
     Vector3d z{of_vx,of_vy,of_z};
+    z = R_ic*z;
+    cout<<"z2 = \n"<<z<<endl;
     ekf->update2(z);
-    std::cout<<"sigma =\n"<<ekf->getCovariance().diagonal()<<std::endl;
-    std::cout<<"mu =\n"<<ekf->getMean()<<std::endl<<std::endl;
+    std::cout<<"sigma2 =\n"<<ekf->getCovariance().diagonal()<<std::endl;
+    std::cout<<"mu2 =\n"<<ekf->getMean()<<std::endl<<std::endl;
     publish_odom(ekf->getMean());
 }
 
@@ -146,10 +147,12 @@ int main(int argc, char **argv)
     ros::NodeHandle n("~");
     ros::Subscriber s1 = n.subscribe("imu", 1000, imu_callback);
     ros::Subscriber s2 = n.subscribe("tag_odom", 1000, pnp_callback);
-    //ros::Subscriber s3 = n.subscribe("optflow_odom",1000,optflow_callback);
+    ros::Subscriber s3 = n.subscribe("optflow_odom",1000,optflow_callback);
     odom_pub = n.advertise<nav_msgs::Odometry>("ekf_odom", 100);
-    R_ic = Quaterniond(0, 0, 0, 1).toRotationMatrix();
-    T_ic<<0.1, 0, 0.03;
+    R_ic<<  0,-1,0,
+            -1,0,0,
+            0,0,-1;
+    T_ic<<-0.1, 0, -0.03;
     R_wm<<  0,1,0,
             1,0,0,
             0,0,-1;
