@@ -13,8 +13,8 @@ using namespace std;
 using namespace Eigen;
 ros::Publisher odom_pub;
 MatrixXd Q = MatrixXd::Identity(15, 15);
-//MatrixXd Rt = MatrixXd::Identity(6,6);
-MatrixXd Rt = MatrixXd::Identity(3,3);
+MatrixXd R_pnp = MatrixXd::Identity(6,6);
+MatrixXd R_optflow = MatrixXd::Identity(3,3);
 double imu_time, last_imu_time=-1.0; 
 
 void imu_callback(const sensor_msgs::Imu::ConstPtr &msg)
@@ -60,6 +60,8 @@ void publish_odom(VectorXd m){
 //Rotation from the camera frame to the IMU frame
 Vector3d T_ic;
 Eigen::Matrix3d R_ic;
+Matrix3d R_wm;
+Vector3d T_wm;
 void pnp_callback(const nav_msgs::Odometry::ConstPtr &msg)
 {
     //your code for update
@@ -79,25 +81,26 @@ void pnp_callback(const nav_msgs::Odometry::ConstPtr &msg)
     
     VectorXd z(6);
 
-    Vector3d T_cw;
-    Matrix3d R_cw;
-    T_cw<<  msg->pose.pose.position.x,
+    Vector3d T_cm;
+    Matrix3d R_cm;
+    T_cm<<  msg->pose.pose.position.x,
             msg->pose.pose.position.y,
             msg->pose.pose.position.z;
-    R_cw = Quaterniond(
+    R_cm = Quaterniond(
         msg->pose.pose.orientation.w,
         msg->pose.pose.orientation.x,
         msg->pose.pose.orientation.y,
         msg->pose.pose.orientation.z
     ).toRotationMatrix();
 
-    Vector3d T_wc = -1*T_cw;
-    Matrix3d R_wc = R_cw.transpose();
+    Vector3d T_mc = -1*T_cm;
+    Matrix3d R_mc = R_cm.transpose();
     Vector3d T_ci = -1*T_ic;
     Matrix3d R_ci = R_ic.transpose();
    
-    Matrix3d R_wi = R_wc*R_ci;
-    Vector3d T_wi = R_wc*T_ci+T_wc;
+    Matrix3d R_wi = R_wm*R_mc*R_ci;
+    Vector3d T_wi = R_wm*(R_mc*T_ci+T_mc)+T_wm;
+    cout<<"R_wi =\n"<<R_wi<<endl;
     
     Vector3d rpy_pnp = EKF::util_RotToRPY(R_wi);
     //cout<<"Z rpy = \n"<<rpy_pnp/M_PI*180<<endl;
@@ -114,7 +117,7 @@ void pnp_callback(const nav_msgs::Odometry::ConstPtr &msg)
             0.1,0.1,0.1,
             0.1,0.1,0.1;
 
-        ekf = new EKF(initial_state,initial_cov,Q,Rt);
+        ekf = new EKF(initial_state,initial_cov,Q,R_pnp,R_optflow);
         return;
     }
     ekf->update1(z);
@@ -129,21 +132,7 @@ void optflow_callback(const nav_msgs::Odometry::ConstPtr &msg){
     double  of_vx = msg->twist.twist.linear.x,
             of_vy = msg->twist.twist.linear.y,
             of_z = msg->pose.pose.position.z;
-    if(ekf==nullptr){
-        VectorXd initial_state = VectorXd::Zero(15);
-        initial_state(2) = of_z;
-        MatrixXd initial_cov = MatrixXd::Zero(15,15);
-        initial_cov.diagonal()<<
-            0.01,0.01,0.01,
-            0.01,0.01,0.01,
-            0.05,0.05,0.05,
-            0.1,0.1,0.1,
-            0.1,0.1,0.1;
-
-        ekf = new EKF(initial_state,initial_cov,Q,Rt);
-        return;
-    }
-
+    
     Vector3d z{of_vx,of_vy,of_z};
     ekf->update2(z);
     std::cout<<"sigma =\n"<<ekf->getCovariance().diagonal()<<std::endl;
@@ -156,11 +145,15 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "ekf");
     ros::NodeHandle n("~");
     ros::Subscriber s1 = n.subscribe("imu", 1000, imu_callback);
-    //ros::Subscriber s2 = n.subscribe("tag_odom", 1000, pnp_callback);
-    ros::Subscriber s3 = n.subscribe("optflow_odom",1000,optflow_callback);
+    ros::Subscriber s2 = n.subscribe("tag_odom", 1000, pnp_callback);
+    //ros::Subscriber s3 = n.subscribe("optflow_odom",1000,optflow_callback);
     odom_pub = n.advertise<nav_msgs::Odometry>("ekf_odom", 100);
     R_ic = Quaterniond(0, 0, 0, 1).toRotationMatrix();
     T_ic<<0.1, 0, 0.03;
+    R_wm<<  0,1,0,
+            1,0,0,
+            0,0,-1;
+    T_wm = Vector3d::Zero();
     // Q imu covariance matrix; Rt visual odomtry covariance matrix
     // You should also tune these parameters
     /*
@@ -176,10 +169,10 @@ int main(int argc, char **argv)
         0.01,0.01,0.01, // acc
         0.05,0.05,0.05,    // gyro bias
         0.05,0.05,0.05;    // acc bias
-    //Rt.diagonal()<<
-    //    0.01,0.01,0.01, // PnP position
-    //    0.01,0.01,0.01; // PnP orientation
-    Rt.diagonal()<<
+    R_pnp.diagonal()<<
+        0.01,0.01,0.01, // PnP position
+        0.01,0.01,0.01; // PnP orientation
+    R_optflow.diagonal()<<
         0.1,0.1,0.005; // optflow vx vy h
         
     ros::spin();

@@ -4,6 +4,7 @@
     <node pkg="ekf" type="ekf" name="ekf_node" output="screen">
         <remap from="~imu" to="/dji_sdk_1/dji_sdk/imu" />
         <remap from="~optflow_odom" to="/optical_flow/odom" />
+        <remap from="~tag_odom" to="/tag_detector_node/odom_ref" />
     </node>
 
     <node pkg="optical_flow" type="optical_flow" name="optflow_node" output="log" />

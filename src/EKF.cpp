@@ -4,12 +4,13 @@ using namespace std;
 
 using namespace Eigen;
 
-EKF::EKF(const VectorXd is, const MatrixXd ic, const MatrixXd Q_in, const MatrixXd R_in){
+EKF::EKF(const VectorXd is, const MatrixXd ic, const MatrixXd Q_in, const MatrixXd R_pnp_in, const MatrixXd R_optflow_in){
     mu = is;
     updateMean();
     sigma = ic;
     Q = Q_in; // 15*15
-    R = R_in; // 6*6 for part 1, 9*9 for part 2
+    R_pnp = R_pnp_in; // 6*6
+    R_optflow = R_pnp_in; // 3*3
 
     /* Initialize the linear measurement matrices */
     C1 = MatrixXd::Identity(6,15);
@@ -242,23 +243,14 @@ inline Vector3d EKF::g2(){
     return Vector3d{vx,vy,z};
 }
 
-inline MatrixXd EKF::K(const MatrixXd& C){
+inline MatrixXd EKF::K(const MatrixXd& C, const MatrixXd& R){
     MatrixXd Ct = C;
     MatrixXd Ct_T = Ct.transpose();
     return sigma*Ct_T*((Ct*sigma*Ct_T+R).inverse());
 }
-/*
-MatrixXd EKF::K1(){
-    MatrixXd K(15,6); 
-    MatrixXd Ct = C1;
-    MatrixXd Ct_T = Ct.transpose();
-
-    K = sigma*Ct_T*((Ct*sigma*Ct_T+R).inverse());
-    return K;
-}*/
 
 void EKF::update1(const VectorXd zt){
-    MatrixXd Kt = K(C1);//15*6
+    MatrixXd Kt = K(C1,R_pnp);//15*6
 
     /* Deal with Euler angle discontinuity */
     VectorXd tmp = zt-g1();
@@ -271,19 +263,9 @@ void EKF::update1(const VectorXd zt){
     updateMean();
     sigma -= Kt*C1*sigma;
 }
-/*
-MatrixXd K2(){
-    MatrixXd K(15,3);
-    MatrixXd Ct = C2;
-    MatrixXd Ct_T = Ct.transpose();
-
-    K = sigma*Ct_T*((Ct*sigma*Ct_T+R).inverse());
-   
-    return K;
-}*/
 
 void EKF::update2(const Vector3d zt){
-    MatrixXd Kt = K(C2);//15*3
+    MatrixXd Kt = K(C2,R_optflow);//15*3
     
     mu += Kt*(zt-g2());
     updateMean();

@@ -4,8 +4,8 @@
 class EKF{
 public:
     EKF(const Eigen::VectorXd initial_mean, const Eigen::MatrixXd initial_cov,
-        const Eigen::MatrixXd Q_in, const Eigen::MatrixXd R_in);
-    Eigen::VectorXd predict(const Eigen::VectorXd u_t, const double dt); 
+        const Eigen::MatrixXd Q_in, const Eigen::MatrixXd R_pnp, const Eigen::MatrixXd R_optflow);
+    Eigen::VectorXd predict(const Eigen::VectorXd u_t, const double dt); // IMU
     void update1(const Eigen::VectorXd z_t); // PnP
     void update2(const Eigen::Vector3d z_t); // optflow
 
@@ -61,7 +61,7 @@ private:
     Eigen::VectorXd g1();
     Eigen::Vector3d g2();
     /* Kalman Gain */
-    Eigen::MatrixXd K(const Eigen::MatrixXd& C);
+    Eigen::MatrixXd K(const Eigen::MatrixXd& C, const Eigen::MatrixXd& R);
     //Eigen::MatrixXd K1();
     //Eigen::MatrixXd K2();
 
@@ -69,7 +69,8 @@ private:
     Eigen::MatrixXd sigma;  // covariance matrix
     Eigen::VectorXd mu;     // mean
     Eigen::MatrixXd Q;
-    Eigen::MatrixXd R;
+    Eigen::MatrixXd R_pnp;
+    Eigen::MatrixXd R_optflow;
 
     /* Mean of State, mu */
     double x,y,z;           // X1: position p,      PNP
