@@ -7,7 +7,7 @@ public:
         const Eigen::MatrixXd Q_in, const Eigen::MatrixXd R_pnp, const Eigen::MatrixXd R_optflow);
     Eigen::VectorXd predict(const Eigen::VectorXd u_t, const double dt); // IMU
     void update1(const Eigen::VectorXd z_t); // PnP, {x,y,z,r,p,y}
-    void update2(const Eigen::VectorXd z_t); // optflow, {0,0,z_i,vx_i,vy_i,0}
+    void update2(const Eigen::Vector3d z_t); // optflow+TF_mini, {T_iw,v_i_x,i_i_y}
     void update2l(const Eigen::Vector3d z_t);// linear optical flow
 
     Eigen::MatrixXd getCovariance() const{return sigma;}
@@ -60,12 +60,10 @@ private:
     Eigen::MatrixXd C2();
     Eigen::MatrixXd C2l;
     Eigen::VectorXd g1();
-    Eigen::VectorXd g2();
+    Eigen::Vector3d g2();
     Eigen::Vector3d g2l();
     /* Kalman Gain */
     Eigen::MatrixXd K(const Eigen::MatrixXd& C, const Eigen::MatrixXd& R);
-    //Eigen::MatrixXd K1();
-    //Eigen::MatrixXd K2();
 
     /* Private Data */
     Eigen::MatrixXd sigma;  // covariance matrix
