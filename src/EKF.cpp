@@ -215,9 +215,9 @@ void EKF::update1(const VectorXd zt){
 
 Vector3d EKF::g2(){
     Vector3d g;
-    g<<- x*(cos(yaw)*sin(pitch) + cos(pitch)*sin(roll)*sin(yaw)) - y*(sin(pitch)*sin(yaw) - cos(pitch)*cos(yaw)*sin(roll)) - z*cos(pitch)*cos(roll),
-    vx*(cos(pitch)*cos(yaw) - sin(pitch)*sin(roll)*sin(yaw)) + vy*(cos(pitch)*sin(yaw) + cos(yaw)*sin(pitch)*sin(roll)) - vz*cos(roll)*sin(pitch),
-    vz*sin(roll) + vy*cos(roll)*cos(yaw) - vx*cos(roll)*sin(yaw);
+    g<<z*cos(pitch)*cos(roll),
+    vx*(cos(pitch)*cos(yaw) - sin(pitch)*sin(roll)*sin(yaw)),
+    vy*cos(roll)*cos(yaw);
     return g;
 }
 
@@ -227,20 +227,29 @@ inline Vector3d EKF::g2l(){
 
 MatrixXd EKF::C2(){
     MatrixXd C = MatrixXd::Zero(3,15);
-    C<< - cos(yaw)*sin(pitch) - cos(pitch)*sin(roll)*sin(yaw), cos(pitch)*cos(yaw)*sin(roll) - sin(pitch)*sin(yaw), -cos(pitch)*cos(roll),    z*cos(pitch)*sin(roll) + y*cos(pitch)*cos(roll)*cos(yaw) - x*cos(pitch)*cos(roll)*sin(yaw),      z*cos(roll)*sin(pitch) - y*(cos(pitch)*sin(yaw) + cos(yaw)*sin(pitch)*sin(roll)) - x*(cos(pitch)*cos(yaw) - sin(pitch)*sin(roll)*sin(yaw)),   x*(sin(pitch)*sin(yaw) - cos(pitch)*cos(yaw)*sin(roll)) - y*(cos(yaw)*sin(pitch) + cos(pitch)*sin(roll)*sin(yaw)),0,0,0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, vz*sin(pitch)*sin(roll) + vy*cos(roll)*cos(yaw)*sin(pitch) - vx*cos(roll)*sin(pitch)*sin(yaw), - vx*(cos(yaw)*sin(pitch) + cos(pitch)*sin(roll)*sin(yaw)) - vy*(sin(pitch)*sin(yaw) - cos(pitch)*cos(yaw)*sin(roll)) - vz*cos(pitch)*cos(roll), vy*(cos(pitch)*cos(yaw) - sin(pitch)*sin(roll)*sin(yaw)) - vx*(cos(pitch)*sin(yaw) + cos(yaw)*sin(pitch)*sin(roll)), cos(pitch)*cos(yaw) - sin(pitch)*sin(roll)*sin(yaw), cos(pitch)*sin(yaw) + cos(yaw)*sin(pitch)*sin(roll), -cos(roll)*sin(pitch), 0, 0, 0, 0, 0, 0,
-    0, 0, 0, vz*cos(roll) - vy*cos(yaw)*sin(roll) + vx*sin(roll)*sin(yaw), 0, - vx*cos(roll)*cos(yaw) - vy*cos(roll)*sin(yaw), -cos(roll)*sin(yaw), cos(roll)*cos(yaw), sin(roll), 0, 0, 0, 0, 0, 0;
+    //C<<- cos(yaw)*sin(pitch) - cos(pitch)*sin(roll)*sin(yaw), cos(pitch)*cos(yaw)*sin(roll) - sin(pitch)*sin(yaw), -cos(pitch)*cos(roll), z*cos(pitch)*sin(roll) + y*cos(pitch)*cos(roll)*cos(yaw) - x*cos(pitch)*cos(roll)*sin(yaw), z*cos(roll)*sin(pitch) - y*(cos(pitch)*sin(yaw) + cos(yaw)*sin(pitch)*sin(roll)) - x*(cos(pitch)*cos(yaw) - sin(pitch)*sin(roll)*sin(yaw)), x*(sin(pitch)*sin(yaw) - cos(pitch)*cos(yaw)*sin(roll)) - y*(cos(yaw)*sin(pitch) + cos(pitch)*sin(roll)*sin(yaw)), 0, 0, 0, 0, 0, 0, 0, 0, 0,
+
+    C(0,2) = -cos(pitch)*cos(roll);
+    C(1,6) = cos(pitch)*cos(yaw) - sin(pitch)*sin(roll)*sin(yaw);
+    C(2,7) = cos(roll)*cos(yaw);
     return C;
 }
 
 void EKF::update2(const Vector3d zt){
-    MatrixXd C = C2();// freeze mu
+    double v_ix=-zt(0),v_iy=-zt(1),z_ip=zt(2);
+    double z_c = z_ip*cos(pitch)*cos(roll);
+    double v_wx = v_ix*(cos(pitch)*cos(yaw) - sin(pitch)*sin(roll)*sin(yaw)) - v_iy*cos(roll)*sin(yaw);
+    double v_wy = v_ix*(cos(pitch)*sin(yaw) + cos(yaw)*sin(pitch)*sin(roll)) + v_iy*cos(roll)*cos(yaw);
+    Vector3d z{v_wx,v_wy,z_c};
+
+    //MatrixXd C = C2();// freeze mu
     // zt is in the imu frame
-    MatrixXd Kt = K(C,R_optflow);//15*3
+    MatrixXd Kt = K(C2l,R_optflow);//15*3
     
-    mu += Kt*(zt-g2());
+    mu += Kt*(z-g2l());
+    //cout<<"g2 = "<<g2l()<<endl;
     updateMean();
-    sigma -= Kt*C*sigma;
+    sigma -= Kt*C2l*sigma;
 }
 
 void EKF::update2l(const Vector3d zt){
