@@ -7,7 +7,7 @@
         <remap from="~tag_odom" to="/tag_detector/odom_ref" />
     </node>
 
-    <node pkg="optical_flow" type="optical_flow" name="optflow_node" output="log" />
+    <node pkg="optical_flow" type="optical_flow" name="optflow_node" output="screen" />
 
     <node pkg="tag_detector" type="tag_detector" name="tag_detector" output="log">
         <remap from="~image_raw" to="/camera/image_raw"/>
