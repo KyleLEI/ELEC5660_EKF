@@ -3,13 +3,13 @@
     <node name="rosbag" pkg="rosbag" type="play" args=" $(find ekf)/bag/pnp_flow_1.bag -r 0.5" />
     <node pkg="ekf" type="ekf" name="ekf_node" output="screen">
         <remap from="~imu" to="/dji_sdk_1/dji_sdk/imu" />
-        <remap from="~optflow_odom" to="/optical_flow/odom" />
-        <remap from="~tag_odom" to="/tag_detector_node/odom_ref" />
+        <remap from="~optflow_odom" to="/optical_flow/odometry" />
+        <remap from="~tag_odom" to="/tag_detector/odom_ref" />
     </node>
 
     <node pkg="optical_flow" type="optical_flow" name="optflow_node" output="log" />
 
-    <node pkg="tag_detector" type="tag_detector" name="tag_detector_node" output="log">
+    <node pkg="tag_detector" type="tag_detector" name="tag_detector" output="log">
         <remap from="~image_raw" to="/camera/image_raw"/>
         <param name="cam_cal_file" type="string" value="$(find ekf)/config/TA-camera.yml"/>
         <param name="board_config_file" type="string" value="$(find ekf)/config/test_3-1.yml"/>
